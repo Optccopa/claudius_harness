@@ -170,14 +170,13 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None):
 
     return "".join(read)
 
-def tree(path: str = ".") -> str:
+def tree(path: str = ".", prefix: str = "") -> str:
     entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
+    entries = [e for e in entries if not e.name.startswith(".")]
     out = []
     for i, e in enumerate(entries):
-        if e.name.startswith("."):
-            continue
         last = i == len(entries) - 1
-        out.append(f"{'\\ ' if last else '|- '}{e.name}")
+        out.append(f"{prefix}{'\\ ' if last else '|- '}{e.name}")
         if e.is_dir():
-            out.append(tree(e, ("    " if last else "|   ")))
+            out.append(tree(e, prefix + ("    " if last else "|   ")))
     return "\n".join(filter(None, out))
