@@ -86,7 +86,7 @@ class Tools:
         self.named_tool_functions = {
             name: fn
             for name, fn in inspect.getmembers(tools, inspect.isfunction)
-            if fn.__module__ == tools.__name__
+            if fn.__module__ == tools.__name__ and not name.startswith("_")
         }
     def tools(self) -> list:
         return tools.tools
@@ -273,14 +273,31 @@ class Assistant:
 
                     messages.messages.append({"role": "assistant", "content": final.content})
 
+                    for block in final.content:
+                        t = block.type
+
+                        if t == "server_tool_use":
+                            if block.name == "web_search":
+                                console.print(f"[main]    search: {block.input.get('query','')}[/]")
+                            continue
+
+                        if t == "web_search_tool_result":
+                            n = len(block.content) if isinstance(block.content, list) else 0
+                            console.print(f"[main]      {n} results[/]")
+                            continue
+
                     if final.stop_reason != "tool_use":
                         break
 
                     results = []
                     aborted = False
-
                     for block in final.content:
-                        if block.type != "tool_use":
+                        t = block.type
+
+                        if t == "thinking":
+                            continue
+
+                        if t != "tool_use":
                             continue
 
                         if aborted:
@@ -294,7 +311,7 @@ class Assistant:
 
                         args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
                         suffix = f"with {args}" if block.input else ""
-                        console.print(f"[main][Called {block.name} {suffix}][/]")
+                        console.print(f"[main]Called: {block.name} {suffix}")
 
                         try:
                             output = _tools.named_tool_functions[block.name](**block.input)
@@ -338,9 +355,11 @@ class Assistant:
                 usage += u.input_tokens
                 usage += u.output_tokens
 
-                cost = (u.input_tokens * 2.0 + u.output_tokens * 10.0) / 1_000_000
+                cost = (
+                    u.input_tokens * 5
+                    + u.output_tokens * 25) / 1_000_000
 
-            console.print(f"[main]Used {usage} billing tokens (sonnet: ${cost or 0.000:.3f})")
+            console.print(f"[main]Used {usage} billing tokens (opus: ${cost:.3f})")
 
 def run():
     Assistant().chat()
