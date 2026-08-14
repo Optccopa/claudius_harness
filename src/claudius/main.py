@@ -278,7 +278,7 @@ class Assistant:
                             })
                         else:
                             del messages.messages[snapshot:]
-                        console.print("[dim]⌁ interrupted[/]")
+                        console.print("[dim] interrupted[/]")
                         break
 
                     messages.messages.append({"role": "assistant", "content": final.content})
@@ -320,7 +320,7 @@ class Assistant:
                             continue
 
                         args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
-                        suffix = f"with {args}" if block.input else ""
+                        suffix = f"with {args[:80]}" if block.input else ""
                         console.print(f"[dim]  ▪ {block.name}  {suffix}[/]")
 
                         try:
@@ -328,7 +328,10 @@ class Assistant:
                             is_error = False
                         except KeyboardInterrupt:
                             output, is_error, aborted = "Interrupted by user.", True, True
-                            console.print("\n[err]    ↳ tool use interrupted[/]")
+                            console.print("\n[err]    \\ tool use interrupted[/]")
+                        except TypeError as e:
+                            output = f"{e}. Check the tool's input_schema for exact parameter names."
+                            is_error = True
                         except Exception as e:
                             output, is_error = f"{type(e).__name__}: {e}", True
 

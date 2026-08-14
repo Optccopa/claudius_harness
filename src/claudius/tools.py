@@ -172,29 +172,29 @@ def _raise_for_permission(label: str):
         raise RejectedToolUse(f"Your tool use was rejected, {label}")
 
 def _show_diff(old: str, new: str, name: str, max_lines: int = 40) -> None:
-    diff = difflib.unified_diff(
-        old.splitlines(keepends=True),
-        new.splitlines(keepends=True),
-        fromfile=name, tofile=name, n=3,
-    )
-    lines = "".join(diff).splitlines()
+    old_lines = old.splitlines()
+    new_lines = new.splitlines()
 
-    if len(lines) > max_lines:
-        omitted = len(lines) - max_lines
-        lines = lines[:max_lines] + [f"@@ ... {omitted} more lines ..."]
+    console.print(f"[dim]{name}[/]")
 
-    console.print()
-    for line in lines:
-        if line.startswith("+++") or line.startswith("---"):
-            continue
-        elif line.startswith("@@"):
-            console.print(f"  [dim]{line}[/]")
-        elif line.startswith("+"):
-            console.print(f"  [ok]{line}[/]")
-        elif line.startswith("-"):
-            console.print(f"  [err]{line}[/]")
-        else:
-            console.print(f"  [dim]{line}[/]")
+    shown = 0
+    for group in difflib.SequenceMatcher(None, old_lines, new_lines).get_grouped_opcodes(3):
+        for tag, i1, i2, j1, j2 in group:
+            if shown >= max_lines:
+                console.print("  [dim]…[/]")
+                return
+            if tag in ("replace", "delete"):
+                for n, line in enumerate(old_lines[i1:i2], i1 + 1):
+                    console.print(f"  [dim]{n:>4}[/] [err]- {line}[/]")
+                    shown += 1
+            if tag in ("replace", "insert"):
+                for n, line in enumerate(new_lines[j1:j2], j1 + 1):
+                    console.print(f"  [dim]{n:>4}[/] [ok]+ {line}[/]")
+                    shown += 1
+            if tag == "equal":
+                for n, line in enumerate(old_lines[i1:i2], i1 + 1):
+                    console.print(f"  [dim]{n:>4}   {line}[/]")
+                    shown += 1
     console.print()
 
 def ask_user_question(question: str, choices: list, max_answers: int = 1):
@@ -248,8 +248,10 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None):
 
     return "".join(read)
 
-def edit_file(path: str, old_string: str, new_string: str,
-              replace_all: bool = False) -> str:
+def edit_file(path: str, old_string: str = "", new_string: str = "",
+              replace_all: bool = False, **kwargs) -> str:
+    old_string = old_string or kwargs.get("old_str", "")
+    new_string = new_string or kwargs.get("new_str", "")
     p = Path(path)
 
     if not p.exists():
