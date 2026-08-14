@@ -2,6 +2,8 @@ import questionary as qt
 import subprocess
 import os
 from pathlib import Path
+from rich.tree import Tree
+from rich import print
 
 tools = [
     {
@@ -86,6 +88,23 @@ tools = [
                 }
             }
         }
+    },
+    {
+        "name": "tree",
+        "description": (
+            "Recursively list contents of a directory as a tree\n"
+            "Use as an alternative to ls and any time you need to list files"
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": [],
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path to list, default: project dir"
+                }
+            }
+        }
     }
 ]
 
@@ -140,7 +159,7 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None):
         end_line = len(lines)
 
     if start_line > end_line:
-        raise ValueError("Start line cannot be befoe end line")
+        raise ValueError("Start line cannot be before end line")
     read = []
     for i, l in enumerate(lines, 1):
         if i < start_line:
@@ -150,3 +169,15 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None):
         read.append(f"{i} {l}")
 
     return "".join(read)
+
+def tree(path: str = ".") -> str:
+    entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
+    out = []
+    for i, e in enumerate(entries):
+        if e.name.startswith("."):
+            continue
+        last = i == len(entries) - 1
+        out.append(f"{'\\ ' if last else '|- '}{e.name}")
+        if e.is_dir():
+            out.append(tree(e, ("    " if last else "|   ")))
+    return "\n".join(filter(None, out))

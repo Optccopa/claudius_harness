@@ -16,13 +16,16 @@ from rich.theme import Theme
 load_dotenv()
 
 theme = Theme({
-    "main": "#D97757",
-    "light_claude": "#D8AA9B",
-    "success": "green",
-    "error": "bold red"
+    "body":   "#e8e3d8",
+    "accent": "#D97757",
+    "dim":    "#8a8175",
+    "user":   "#b9f2ff",
+    "ok":     "#7fb069",
+    "warn":   "#d9a75f",
+    "err":    "#d9605a",
 })
 
-console = Console(theme=theme)
+console = Console(theme=theme, highlight=False)
 
 class Settings:
     def __init__(self):
@@ -59,6 +62,7 @@ class Messages:
 
         system = system.replace("{model}", settings.model)
         system = system.replace("{time}", time)
+        system = system.replace("{dir}", str(Path().absolute().resolve()))
 
         return system
 
@@ -108,7 +112,7 @@ class Client:
             
             if not self._anthropic:
                 self._anthropic = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-                console.print(f"[claude]Loaded {settings.model_source}")
+                console.print(f"[dim]Loaded {settings.model_source}[/]")
 
             return self._anthropic
 
@@ -118,7 +122,7 @@ class Client:
             
             if not self._openrouter:
                 self._openrouter = anthropic.Anthropic(api_key=settings.openrouter_api_key, base_url="https://openrouter.ai/api")
-                console.print(f"[success]Loaded {settings.model_source}")
+                console.print(f"[dim]Loaded {settings.model_source}[/]")
                 
             return self._openrouter
 
@@ -134,15 +138,15 @@ class CommandHandler:
                 "Select a model",
                 [m.id for m in client.client().models.list()]
             ).ask()
-            console.print(f"[success]Changed model to {args}")
+            console.print(f"[ok]Changed model to {args}[/]")
         elif args:
             settings.model = args
-            console.print(f"[success]Changed model to {args}")
+            console.print(f"[ok]Changed model to {args}[/]")
         else:
-            console.print(f"[error]Please provide a model string while using openrouter")
+            console.print(f"[err]Please provide a model string while using openrouter[/]")
 
     def _models(self):
-        console.print(f"[success]Current model: {settings.model}\n")
+        console.print(f"[ok]Current model: {settings.model}[/]\n")
         if settings.model_source == "openrouter":
             try:
                 r = client.client()._client.get(
@@ -151,7 +155,7 @@ class CommandHandler:
                 )
                 r.raise_for_status()
             except httpx.HTTPError as e:
-                console.print(f"[error]Failed fetching openrouter models: {e}")
+                console.print(f"[err]Failed fetching openrouter models: {e}[/]")
                 return True
 
             free, paid = [], []
@@ -163,37 +167,37 @@ class CommandHandler:
                 (free if is_free else paid).append(m["id"])
 
             sep = "\n  "
-            console.print(f"[main]Openrouter models:\n\nTop 5 free:\n  {sep.join(free[:5])}\n\nTop 10 paid:\n  {sep.join(paid[:10])}")
+            console.print(f"[accent]Openrouter models:[/]\n\n[accent]Top 5 free:[/]\n  [body]{sep.join(free[:5])}[/]\n\n[accent]Top 10 paid:[/]\n  [body]{sep.join(paid[:10])}[/]")
         elif settings.model_source == "anthropic":
             sep = "\n  "
-            console.print(f"[claude]Anthropic models:\n  {sep.join(m.id for m in client.client().models.list())}")
+            console.print(f"[accent]Anthropic models:[/]\n  [body]{sep.join(m.id for m in client.client().models.list())}[/]")
 
     def _source(self, args: str | None):
         if args:
             settings.model_source = args
-            console.print(f"[success]Changed model source to {args}")
+            console.print(f"[ok]Changed model source to {args}[/]")
         else:
-            console.print(f"[main]Current model source: {settings.model_source}")
+            console.print(f"[body]Current model source: {settings.model_source}[/]")
 
     def _tools(self):
         tools = _tools.tools()
 
         if not tools:
-            console.print("[main]No tools registered")
+            console.print("[dim]No tools registered[/]")
             return
 
         width = max(len(t["name"]) for t in tools)
         for t in tools:
             desc = t.get("description") or "Description not found"
-            console.print(f"[main]{t['name']:<{width}}: {desc}")
+            console.print(f"  [body]{t['name']:<{width}}[/]  [dim]{desc}[/]")
 
     def _save(self, args: str | None):
         messages.save(f"{settings.chats_dir}/chat-{args}.json")
-        console.print("[success]Saved messages")
+        console.print("[ok]Saved messages[/]")
 
     def _load(self, args: str | None):
         messages.load(f"{settings.chats_dir}/chat-{args}.json")
-        console.print("[success]Loaded messages")
+        console.print("[ok]Loaded messages[/]")
     
     def parse(self, user_input: str = "/") -> bool:
         cmd, _, args = user_input.removeprefix("/").partition(" ")
@@ -218,7 +222,7 @@ class CommandHandler:
         elif cmd == "load":
             self._load(args=args)
         else:
-            console.print(f"[error]Command not found: {cmd}")
+            console.print(f"[err]Command not found: {cmd}[/]")
 
 class Assistant:
     def __init__(self):
@@ -251,7 +255,7 @@ class Assistant:
                             messages=messages.messages
                         ) as stream:
                             for text in stream.text_stream:
-                                console.print(f"[light_claude]{text}", end="")
+                                console.print(text, style="body", end="", markup=False, highlight=False)
                                 parts.append(text)
                             final = stream.get_final_message()
                     except KeyboardInterrupt:
@@ -268,7 +272,7 @@ class Assistant:
                             })
                         else:
                             del messages.messages[snapshot:]
-                        console.print("[main][interrupted][/]")
+                        console.print("[dim]⌁ interrupted[/]")
                         break
 
                     messages.messages.append({"role": "assistant", "content": final.content})
@@ -278,12 +282,12 @@ class Assistant:
 
                         if t == "server_tool_use":
                             if block.name == "web_search":
-                                console.print(f"[main]    search: {block.input.get('query','')}[/]")
+                                console.print(f"[dim]  ▪ search  {block.input.get('query','')}[/]")
                             continue
 
                         if t == "web_search_tool_result":
                             n = len(block.content) if isinstance(block.content, list) else 0
-                            console.print(f"[main]      {n} results[/]")
+                            console.print(f"[dim]    ↳ {n} results[/]")
                             continue
 
                     if final.stop_reason != "tool_use":
@@ -311,14 +315,14 @@ class Assistant:
 
                         args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
                         suffix = f"with {args}" if block.input else ""
-                        console.print(f"[main]Called: {block.name} {suffix}")
+                        console.print(f"[dim]  ▪ {block.name}  {suffix}[/]")
 
                         try:
                             output = _tools.named_tool_functions[block.name](**block.input)
                             is_error = False
                         except KeyboardInterrupt:
                             output, is_error, aborted = "Interrupted by user.", True, True
-                            console.print("\n[error][tool use interrupted][/]")
+                            console.print("\n[err]    ↳ tool use interrupted[/]")
                         except Exception as e:
                             output, is_error = f"{type(e).__name__}: {e}", True
 
@@ -337,15 +341,15 @@ class Assistant:
                 print()
 
             except anthropic.APIConnectionError as e:
-                console.print(f"[error]{e.message}")
+                console.print(f"[err]{e.message}[/]")
                 del messages.messages[snapshot:]
 
             except anthropic.RateLimitError as e:
-                console.print(f"[error]{e.message}")
+                console.print(f"[err]{e.message}[/]")
                 del messages.messages[snapshot:]
             
             except anthropic.APIStatusError as e:
-                console.print(f"[error]{e.body["error"]["message"]}")
+                console.print(f"[err]{e.body["error"]["message"]}[/]")
                 del messages.messages[snapshot:]
                 continue
 
@@ -356,10 +360,10 @@ class Assistant:
                 usage += u.output_tokens
 
                 cost = (
-                    u.input_tokens * 5
-                    + u.output_tokens * 25) / 1_000_000
+                    u.input_tokens * 2
+                    + u.output_tokens * 10) / 1_000_000
 
-            console.print(f"[main]Used {usage} billing tokens (opus: ${cost:.3f})")
+            console.print(f"[dim]Used {usage} billing tokens (sonnet: ${cost:.3f})[/]")
 
 def run():
     Assistant().chat()
