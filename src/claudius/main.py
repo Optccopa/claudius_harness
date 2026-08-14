@@ -1,0 +1,346 @@
+import os
+import datetime
+import inspect
+import json
+from pathlib import Path
+from dotenv import load_dotenv
+
+from claudius import tools
+
+import anthropic
+import httpx
+import questionary as qt
+from rich.console import Console
+from rich.theme import Theme
+
+load_dotenv()
+
+theme = Theme({
+    "main": "#D97757",
+    "light_claude": "#D8AA9B",
+    "success": "green",
+    "error": "bold red"
+})
+
+console = Console(theme=theme)
+
+class Settings:
+    def __init__(self):
+        self.base_dir = Path(__file__).resolve().parent.parent.parent
+
+        load_dotenv(self.base_dir / ".env")
+
+        self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+
+        self.model_source = os.getenv("MODEL_SOURCE")
+        self.model = os.getenv("MODEL")
+
+        self.tools_file = Path("tools.py")
+        self.system_file = self.base_dir / "SYSTEM.md"
+
+        self.chats_dir = self.base_dir / "chats"
+        self.chats_dir.mkdir(exist_ok=True)
+
+
+settings = Settings()
+
+class Messages:
+    def __init__(self):
+        self.messages = []
+
+    def sys_prompt(self) -> str:
+        now = datetime.datetime.now()
+
+        time = now.strftime("%Y-%m-%d %I:%M %p")
+
+        with open(settings.system_file) as f:
+            system = f.read()
+
+        system = system.replace("{model}", settings.model)
+        system = system.replace("{time}", time)
+
+        return system
+
+    def save(self, path: Path) -> None:
+        def to_dict(b):
+            return b if isinstance(b, dict) else b.model_dump(mode="json", exclude_none=True)
+
+        out = [
+            {"role": m["role"],
+            "content": m["content"] if isinstance(m["content"], str)
+                        else [to_dict(b) for b in m["content"]]}
+            for m in self.messages
+        ]
+
+        path = Path(path)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(out, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(path)
+
+    def load(self, path: Path):
+        self.messages = json.loads(Path(path).read_text())
+
+class Tools:
+    def __init__(self):
+        self.named_tool_functions = {
+            name: fn
+            for name, fn in inspect.getmembers(tools, inspect.isfunction)
+            if fn.__module__ == tools.__name__
+        }
+    def tools(self) -> list:
+        return tools.tools
+
+messages = Messages()
+
+_tools = Tools()
+
+class Client:
+    def __init__(self):
+        self._anthropic = None
+        self._openrouter = None
+
+    def client(self):
+
+        if settings.model_source == "anthropic":
+            if not settings.anthropic_api_key:
+                raise ValueError("Failed loading anthropic api key, set ANTHROPIC_API_KEY in .env")
+            
+            if not self._anthropic:
+                self._anthropic = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+                console.print(f"[claude]Loaded {settings.model_source}")
+
+            return self._anthropic
+
+        elif settings.model_source == "openrouter":
+            if not settings.openrouter_api_key:
+                raise ValueError("Failed loading openrouter api key, set OPENROUTER_API_KEY in .env")
+            
+            if not self._openrouter:
+                self._openrouter = anthropic.Anthropic(api_key=settings.openrouter_api_key, base_url="https://openrouter.ai/api")
+                console.print(f"[success]Loaded {settings.model_source}")
+                
+            return self._openrouter
+
+        else:
+            raise ValueError(f"Invalid model source: {settings.model_source}, please enter a valid model source using /source or changing the .env file")
+
+client = Client()
+
+class CommandHandler:
+    def _model(self, args: str | None):
+        if settings.model_source == "anthropic":
+            settings.model = qt.select(
+                "Select a model",
+                [m.id for m in client.client().models.list()]
+            ).ask()
+            console.print(f"[success]Changed model to {args}")
+        elif args:
+            settings.model = args
+            console.print(f"[success]Changed model to {args}")
+        else:
+            console.print(f"[error]Please provide a model string while using openrouter")
+
+    def _models(self):
+        console.print(f"[success]Current model: {settings.model}\n")
+        if settings.model_source == "openrouter":
+            try:
+                r = client.client()._client.get(
+                    "https://openrouter.ai/api/v1/models",
+                    params={"sort": "intelligence-high-to-low"}
+                )
+                r.raise_for_status()
+            except httpx.HTTPError as e:
+                console.print(f"[error]Failed fetching openrouter models: {e}")
+                return True
+
+            free, paid = [], []
+            for m in r.json()["data"]:
+                if m["id"].endswith(":batch"):
+                    continue
+                p = m.get("pricing", {})
+                is_free = not any(float(p.get(k) or 0) for k in ("prompt", "completion", "request"))
+                (free if is_free else paid).append(m["id"])
+
+            sep = "\n  "
+            console.print(f"[main]Openrouter models:\n\nTop 5 free:\n  {sep.join(free[:5])}\n\nTop 10 paid:\n  {sep.join(paid[:10])}")
+        elif settings.model_source == "anthropic":
+            sep = "\n  "
+            console.print(f"[claude]Anthropic models:\n  {sep.join(m.id for m in client.client().models.list())}")
+
+    def _source(self, args: str | None):
+        if args:
+            settings.model_source = args
+            console.print(f"[success]Changed model source to {args}")
+        else:
+            console.print(f"[main]Current model source: {settings.model_source}")
+
+    def _tools(self):
+        tools = _tools.tools()
+
+        if not tools:
+            console.print("[main]No tools registered")
+            return
+
+        width = max(len(t["name"]) for t in tools)
+        for t in tools:
+            desc = t.get("description") or "Description not found"
+            console.print(f"[main]{t['name']:<{width}}: {desc}")
+
+    def _save(self, args: str | None):
+        messages.save(f"{settings.chats_dir}/chat-{args}.json")
+        console.print("[success]Saved messages")
+
+    def _load(self, args: str | None):
+        messages.load(f"{settings.chats_dir}/chat-{args}.json")
+        console.print("[success]Loaded messages")
+    
+    def parse(self, user_input: str = "/") -> bool:
+        cmd, _, args = user_input.removeprefix("/").partition(" ")
+        cmd = cmd.lower()
+        args = args.strip()
+
+        if cmd == "model":
+            return self._model(args=args)
+        
+        if cmd == "models":
+            self._models()
+        
+        elif cmd == "source":
+            self._source(args=args)
+
+        elif cmd == "tools":
+            self._tools()
+
+        elif cmd == "save":
+            self._save(args=args)
+
+        elif cmd == "load":
+            self._load(args=args)
+        else:
+            console.print(f"[error]Command not found: {cmd}")
+
+class Assistant:
+    def __init__(self):
+        self.handler = CommandHandler()
+
+    def chat(self):
+        while True:
+            try:
+                user_input = str(qt.text("you:").ask()).strip()
+                if user_input.startswith("/"):
+                    self.handler.parse(user_input)
+                    continue
+            except (EOFError, KeyboardInterrupt):
+                break
+
+            snapshot = len(messages.messages)
+
+            messages.messages.append({"role": "user", "content": user_input})
+
+            try:
+                while True:
+                    parts = []
+                    final = None
+                    try:
+                        with client.client().messages.stream(
+                            model=settings.model,
+                            max_tokens=2048,
+                            system=messages.sys_prompt(),
+                            tools=_tools.tools(),
+                            messages=messages.messages
+                        ) as stream:
+                            for text in stream.text_stream:
+                                console.print(f"[light_claude]{text}", end="")
+                                parts.append(text)
+                            final = stream.get_final_message()
+                    except KeyboardInterrupt:
+                        pass
+
+                    print()
+
+                    if final is None:
+                        partial = "".join(parts).strip()
+                        if partial:
+                            messages.messages.append({
+                                "role": "assistant",
+                                "content": partial + "\n\n[interrupted]",
+                            })
+                        else:
+                            del messages.messages[snapshot:]
+                        console.print("[main][interrupted][/]")
+                        break
+
+                    messages.messages.append({"role": "assistant", "content": final.content})
+
+                    if final.stop_reason != "tool_use":
+                        break
+
+                    results = []
+                    aborted = False
+
+                    for block in final.content:
+                        if block.type != "tool_use":
+                            continue
+
+                        if aborted:
+                            results.append({
+                                "type": "tool_result",
+                                "tool_use_id": block.id,
+                                "content": "interrupted by user.",
+                                "is_error": True,
+                            })
+                            continue
+
+                        args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
+                        suffix = f"with {args}" if block.input else ""
+                        console.print(f"[main][Called {block.name} {suffix}][/]")
+
+                        try:
+                            output = _tools.named_tool_functions[block.name](**block.input)
+                            is_error = False
+                        except KeyboardInterrupt:
+                            output, is_error, aborted = "Interrupted by user.", True, True
+                            console.print("\n[error][tool use interrupted][/]")
+                        except Exception as e:
+                            output, is_error = f"{type(e).__name__}: {e}", True
+
+                        results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": str(output),
+                            "is_error": is_error,
+                        })
+
+                    messages.messages.append({"role": "user", "content": results})
+
+                    if aborted:
+                        break
+
+                print()
+
+            except anthropic.APIConnectionError as e:
+                console.print(f"[error]{e.message}")
+                del messages.messages[snapshot:]
+
+            except anthropic.RateLimitError as e:
+                console.print(f"[error]{e.message}")
+                del messages.messages[snapshot:]
+            
+            except anthropic.APIStatusError as e:
+                console.print(f"[error]{e.body["error"]["message"]}")
+                del messages.messages[snapshot:]
+                continue
+
+            if final:
+                u = final.usage
+                usage = 0
+                usage += u.input_tokens
+                usage += u.output_tokens
+
+                cost = (u.input_tokens * 2.0 + u.output_tokens * 10.0) / 1_000_000
+
+            console.print(f"[main]Used {usage} billing tokens (sonnet: ${cost or 0.000:.3f})")
+
+def run():
+    Assistant().chat()

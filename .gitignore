@@ -1,0 +1,8 @@
+__pycache__/
+.env
+tempCodeRunnerFile.py
+chats/
+port.py
+*.egg-info/
+build/
+dist/
