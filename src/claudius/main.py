@@ -140,7 +140,7 @@ class CommandHandler:
                 "Select a model",
                 [m.id for m in client.client().models.list()]
             ).ask()
-            console.print(f"[ok]Changed model to {args}[/]")
+            console.print(f"[ok]Changed model to {settings.model}[/]")
         elif args:
             settings.model = args
             console.print(f"[ok]Changed model to {args}[/]")

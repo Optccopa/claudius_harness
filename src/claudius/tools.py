@@ -1,9 +1,24 @@
+import difflib
 import questionary as qt
 import subprocess
 import os
 from pathlib import Path
+from rich.console import Console
+from rich.theme import Theme
 from rich.tree import Tree
 from rich import print
+
+theme = Theme({
+    "body":   "#e8e3d8",
+    "accent": "#D97757",
+    "dim":    "#8a8175",
+    "user":   "#b9f2ff",
+    "ok":     "#7fb069",
+    "warn":   "#d9a75f",
+    "err":    "#d9605a",
+})
+
+console = Console(theme=theme, highlight=False)
 
 tools = [
     {
@@ -43,6 +58,7 @@ tools = [
             "`cd` does NOT persist between calls, so chain with && or use absolute "
             "paths when a command depends on a directory change.\n"
             "Never use this to read files unless you cannot use read_file\n"
+            "Never use this to edit files unless you cannot use edit_file\n"
             "commands will prompt the user for approval. If a command is denied, do not retry it — ask "
             "the user what they'd prefer instead."
         ),
@@ -90,6 +106,42 @@ tools = [
         }
     },
     {
+        "name": "edit_file",
+        "description": (
+            "Replace an exact string in a file.\n"
+            "old_string must match the file byte-for-byte including whitespace and "
+            "indentation, and must appear exactly once — include surrounding lines "
+            "for context if needed.\n"
+            "Do NOT include the line numbers that read_file prefixes to its output.\n"
+            "Fails without modifying anything if the match is missing or ambiguous.\n"
+            "Always read_file first so you are matching against actual content.\n"
+            "The user is shown a diff and asked to approve. If denied, do not retry — "
+            "ask the user what they'd prefer instead."
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": ["path", "old_string", "new_string"],
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The file to edit, provide a global directory"
+                },
+                "old_string": {
+                    "type": "string",
+                    "description": "Exact text to replace, without line numbers"
+                },
+                "new_string": {
+                    "type": "string",
+                    "description": "Text to replace it with"
+                },
+                "replace_all": {
+                    "type": "boolean",
+                    "description": "Replace every occurrence instead of requiring uniqueness. default: false"
+                }
+            }
+        }
+    },
+    {
         "name": "tree",
         "description": (
             "Recursively list contents of a directory as a tree\n"
@@ -118,7 +170,33 @@ def _raise_for_permission(label: str):
     ).ask()
     if not ok:
         raise RejectedToolUse(f"Your tool use was rejected, {label}")
-    
+
+def _show_diff(old: str, new: str, name: str, max_lines: int = 40) -> None:
+    diff = difflib.unified_diff(
+        old.splitlines(keepends=True),
+        new.splitlines(keepends=True),
+        fromfile=name, tofile=name, n=3,
+    )
+    lines = "".join(diff).splitlines()
+
+    if len(lines) > max_lines:
+        omitted = len(lines) - max_lines
+        lines = lines[:max_lines] + [f"@@ ... {omitted} more lines ..."]
+
+    console.print()
+    for line in lines:
+        if line.startswith("+++") or line.startswith("---"):
+            continue
+        elif line.startswith("@@"):
+            console.print(f"  [dim]{line}[/]")
+        elif line.startswith("+"):
+            console.print(f"  [ok]{line}[/]")
+        elif line.startswith("-"):
+            console.print(f"  [err]{line}[/]")
+        else:
+            console.print(f"  [dim]{line}[/]")
+    console.print()
+
 def ask_user_question(question: str, choices: list, max_answers: int = 1):
     choices.append("Other")
     response = qt.checkbox(
@@ -169,6 +247,45 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None):
         read.append(f"{i} {l}")
 
     return "".join(read)
+
+def edit_file(path: str, old_string: str, new_string: str,
+              replace_all: bool = False) -> str:
+    p = Path(path)
+
+    if not p.exists():
+        return f"File not found: {path}"
+    if p.is_dir():
+        return f"{path} is a directory."
+    if old_string == new_string:
+        return "old_string and new_string are identical, nothing to do."
+
+    try:
+        text = p.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return f"{path} is not a UTF-8 text file."
+
+    count = text.count(old_string)
+
+    if count == 0:
+        return (
+            "old_string not found. It must match the file exactly, including "
+            "whitespace and indentation. Do NOT include the line-number prefix "
+            "from read_file output. Call read_file and copy the text verbatim."
+        )
+
+    if count > 1 and not replace_all:
+        return (
+            f"old_string appears {count} times. Include surrounding lines to make "
+            f"it unique, or set replace_all=true to change every occurrence."
+        )
+
+    updated = text.replace(old_string, new_string)
+
+    _show_diff(text, updated, p.name)
+    _raise_for_permission(f"edit {p.name}")
+
+    p.write_text(updated, encoding="utf-8")
+    return f"Edited {path} ({count} replacement{'s' if count != 1 else ''})"
 
 def tree(path: str = ".", prefix: str = "") -> str:
     entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
