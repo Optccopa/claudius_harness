@@ -2,7 +2,7 @@
 
 A model harness like claudecode or codex built in python
 
-[![Python 3.13+](https://shields.io)](https://python.org)
+![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-blue%5C%7D)
 
 ## Install
 Create a new file named .env with all the keys from example.env filled
@@ -18,4 +18,4 @@ claudius "hello"
 ## Args
 |Key| Name | Description |
 |---|---|---|
-|positional (first)| Prompt| Start and run a prompt in one line (claudius "hello")|
+|positional (first)| Prompt| Start and run a prompt in one line (`claudius "hello"`)|
