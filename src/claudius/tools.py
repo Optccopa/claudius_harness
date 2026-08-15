@@ -39,7 +39,7 @@ tools = [
                 },
                 "choices": {
                     "type": "array",
-                    "description": "Short answer options. An 'other' field is always shown as well.",
+                    "description": "Short answer options. An extra field is appended for the user to provide extras",
                     "items": {"type": "string"},
                     "minItems": 1
                 },
@@ -292,7 +292,7 @@ def ask_user_question(question: str, choices: list, max_answers: int = 1):
     choices = list(choices) + ["Other"]
     response = qt.checkbox(
         question,
-        set(choices),
+        choices,
         validate=lambda sel: True if len(sel) <= max_answers else f"Pick at most {max_answers}"
     ).ask()
 
@@ -328,7 +328,7 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None):
         end_line = len(lines)
 
     if start_line > end_line:
-        raise ValueError("Start line cannot be before end line")
+        raise ValueError("Start line cannot be after end line")
     read = []
     for i, l in enumerate(lines, 1):
         if i < start_line:
@@ -391,7 +391,7 @@ def tree(path: str = ".", prefix: str = "") -> str:
             out.append(tree(e, prefix + ("    " if last else "|   ")))
     return "\n".join(filter(None, out))
 
-def glob(pattern: str, path: str) -> str:
+def glob(pattern: str, path: str = str(Path().absolute().resolve())) -> str:
     root = Path(path)
     if not root.is_dir():
         return f"Not a directory: {path}"

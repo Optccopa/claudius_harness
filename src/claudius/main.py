@@ -2,6 +2,7 @@ import os
 import datetime
 import inspect
 import json
+import argparse
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -39,8 +40,8 @@ class Settings:
         self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
-        self.model_source = os.getenv("MODEL_SOURCE")
-        self.model = os.getenv("MODEL")
+        self.model_source = os.getenv("MODEL_SOURCE") or "anthropic"
+        self.model = os.getenv("MODEL") or "claude-sonnet-5"
 
         self.tools_file = Path("tools.py")
         self.system_file = self.base_dir / "SYSTEM.md"
@@ -231,10 +232,14 @@ class Assistant:
     def __init__(self):
         self.handler = CommandHandler()
 
-    def chat(self):
+    def chat(self, first: str | None = None):
         while True:
             try:
-                user_input = str(qt.text("you:").ask()).strip()
+                if first:
+                    user_input, first = first, None
+                else:
+                    user_input = str(qt.text("you:").ask()).strip()
+
                 if user_input.startswith("/"):
                     self.handler.parse(user_input)
                     continue
@@ -371,5 +376,14 @@ class Assistant:
 
                 console.print(f"[dim]Used {usage} billing tokens (sonnet: ${cost:.3f})[/]")
 
-def run():
-    Assistant().chat()
+def main():
+    parser = argparse.ArgumentParser(
+        prog="claudius",
+        description="Runs the claudius cli (claudecode like)"
+    )
+    parser.add_argument("user_input", nargs="?")
+    args = parser.parse_args()
+    Assistant().chat(args.user_input)
+
+if __name__ == "__main__":
+    main()
