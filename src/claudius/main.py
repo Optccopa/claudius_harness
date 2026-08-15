@@ -11,7 +11,6 @@ import anthropic
 import httpx
 import questionary as qt
 from rich.console import Console
-from rich.live import Live
 from rich.markdown import Markdown
 from rich.theme import Theme
 
@@ -25,6 +24,8 @@ theme = Theme({
     "ok":     "#7fb069",
     "warn":   "#d9a75f",
     "err":    "#d9605a",
+
+    "markdown.code": "#D97757"
 })
 
 console = Console(theme=theme, highlight=False, width=200)
@@ -256,14 +257,12 @@ class Assistant:
                             tools=_tools.tools(),
                             messages=messages.messages
                         ) as stream:
-                            with Live(console=console, refresh_per_second=12, transient=True) as live:
-                                for text in stream.text_stream:
-                                    parts.append(text)
-                                    live.update(Markdown("".join(parts), style="body"))
+                            for text in stream.text_stream:
+                                parts.append(text)
                             final = stream.get_final_message()
 
-                            if parts:
-                                console.print(Markdown("".join(parts), style="body"))
+                        if parts:
+                            console.print(Markdown("".join(parts), style="body"))
                     except KeyboardInterrupt:
                         pass
 
