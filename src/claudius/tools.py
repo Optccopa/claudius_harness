@@ -1,6 +1,7 @@
 import difflib
 import subprocess
 import os
+import re
 from pathlib import Path
 
 import questionary as qt
@@ -156,6 +157,99 @@ tools = [
                 }
             }
         }
+    },
+    {
+        "name": "glob",
+        "description": (
+            "- Fast file pattern matching tool that works with any codebase size\n"
+            "- Supports glob patterns like \"**/*.py\" or \"src/**/*.ts\"\n"
+            "- Returns matching file paths sorted by modification time, newest first\n"
+            "- Use this tool when you need to find files by name patterns\n"
+            "- Use tree instead when you want to see the shape of a directory\n"
+            "- You can call multiple tools in a single response. It is always better "
+            "to speculatively perform multiple searches in parallel if they are "
+            "potentially useful."
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": ["pattern"],
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "The glob pattern to match files against",
+                },
+                "path": {
+                    "type": "string",
+                    "description": (
+                        "The directory to search in. If not specified, the current working "
+                        "directory will be used. IMPORTANT: Omit this field to use the default "
+                        "directory. DO NOT enter \"undefined\" or \"null\" - simply omit it for "
+                        "the default behavior."
+                    ),
+                },
+            },
+        },
+    },
+    {
+        "name": "grep",
+        "description": (
+            "- Fast content search tool that works with any codebase size\n"
+            "- Searches file contents using regular expressions\n"
+            "- Supports full regex syntax (e.g. \"log.*Error\", \"def\\\\s+\\\\w+\")\n"
+            "- Filter which files are searched with glob_filter (e.g. \"**/*.py\")\n"
+            "- Returns matching lines with line numbers\n"
+            "- Use this instead of Select-String\n"
+            "- Set files_only=true when you only need to know which files match — "
+            "it is much cheaper than returning every line\n"
+            "- When doing an open ended search that may require multiple rounds, "
+            "call this several times in parallel with different patterns"
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": ["pattern"],
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "The regular expression pattern to search for in file contents",
+                },
+                "path": {
+                    "type": "string",
+                    "description": (
+                        "The directory to search in. If not specified, the current working "
+                        "directory will be used. IMPORTANT: Omit this field to use the default "
+                        "directory. DO NOT enter \"undefined\" or \"null\" - simply omit it for "
+                        "the default behavior."
+                    ),
+                },
+                "glob_filter": {
+                    "type": "string",
+                    "description": (
+                        "Glob pattern limiting which files are searched, e.g. \"**/*.py\". "
+                        "Defaults to every file."
+                    ),
+                },
+                "case_insensitive": {
+                    "type": "boolean",
+                    "description": "Case insensitive search. Default false.",
+                },
+                "files_only": {
+                    "type": "boolean",
+                    "description": (
+                        "Return only the paths of files that match, not the matching lines. "
+                        "Default false."
+                    ),
+                },
+                "context": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "description": (
+                        "Lines of context to show before and after each match. Default 0. "
+                        "Ignored when files_only is true."
+                    )
+                }
+            }
+        }
     }
 ]
 
@@ -296,3 +390,58 @@ def tree(path: str = ".", prefix: str = "") -> str:
         if e.is_dir():
             out.append(tree(e, prefix + ("    " if last else "|   ")))
     return "\n".join(filter(None, out))
+
+def glob(pattern: str, path: str) -> str:
+    root = Path(path)
+    if not root.is_dir():
+        return f"Not a directory: {path}"
+
+    hits = [p for p in root.glob(pattern) if p.is_file()]
+    hits.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+    if not hits:
+        return f"No files match {pattern}"
+
+    out = [str(p) for p in hits[:200]]
+    if len(hits) > 200:
+        out.append(f"[{len(hits)} total, showing 200]")
+    return "\n".join(out)
+
+def grep(pattern: str, path: str = ".", glob_filter: str = "**/*",
+         case_insensitive: bool = False, files_only: bool = False,
+         context: int = 0) -> str:
+    try:
+        rx = re.compile(pattern, re.IGNORECASE if case_insensitive else 0)
+    except re.error as e:
+        return f"Bad regex: {e}"
+
+    hits, count = [], 0
+    for f in Path(path).glob(glob_filter):
+        if not f.is_file() or any(p.startswith(".") for p in f.parts):
+            continue
+        try:
+            lines = f.read_text(encoding="utf-8", errors="strict").splitlines()
+        except (UnicodeDecodeError, OSError):
+            continue
+
+        matched = [i for i, l in enumerate(lines) if rx.search(l)]
+        if not matched:
+            continue
+        count += len(matched)
+
+        if files_only:
+            hits.append(str(f))
+            continue
+
+        hits.append(f"\n{f}")
+        for i in matched:
+            lo, hi = max(0, i - context), min(len(lines), i + context + 1)
+            for n in range(lo, hi):
+                mark = ":" if n == i else "-"
+                hits.append(f"{n + 1}{mark} {lines[n][:300]}")
+
+        if len(hits) > 400:
+            hits.append(f"\n[truncated, {count}+ matches]")
+            break
+
+    return "\n".join(hits) if hits else f"No matches for {pattern}"
