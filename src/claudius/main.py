@@ -17,6 +17,11 @@ from rich.theme import Theme
 
 load_dotenv()
 
+stats = {
+    "session_input_tokens": 0,
+    "session_output_tokens": 0
+}
+
 theme = Theme({
     "body":   "#e8e3d8",
     "accent": "#D97757",
@@ -31,6 +36,8 @@ theme = Theme({
 
 console = Console(theme=theme, highlight=False, width=200)
 
+session = httpx.Client()
+
 class Settings:
     def __init__(self):
         self.base_dir = Path(__file__).resolve().parent.parent.parent
@@ -40,7 +47,6 @@ class Settings:
         self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
-        self.model_source = os.getenv("MODEL_SOURCE") or "anthropic"
         self.model = os.getenv("MODEL") or "claude-sonnet-5"
 
         self.mode = "manual"
@@ -109,74 +115,62 @@ class Client:
     def __init__(self):
         self._anthropic = None
         self._openrouter = None
-
-    def client(self):
-
-        if settings.model_source == "anthropic":
+    
+    def client(self, source: str | None = None):
+        if "/" not in settings.model or source == "anthropic":
             if not settings.anthropic_api_key:
                 raise ValueError("Failed loading anthropic api key, set ANTHROPIC_API_KEY in .env")
             
             if not self._anthropic:
                 self._anthropic = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-                console.print(f"[dim]Loaded {settings.model_source}[/]")
 
             return self._anthropic
 
-        elif settings.model_source == "openrouter":
+        elif "/" in settings.model:
             if not settings.openrouter_api_key:
                 raise ValueError("Failed loading openrouter api key, set OPENROUTER_API_KEY in .env")
             
             if not self._openrouter:
                 self._openrouter = anthropic.Anthropic(api_key=settings.openrouter_api_key, base_url="https://openrouter.ai/api")
-                console.print(f"[dim]Loaded {settings.model_source}[/]")
+                console.print(f"[dim]Loaded {settings.model}[/]")
                 
             return self._openrouter
 
         else:
-            raise ValueError(f"Invalid model source: {settings.model_source}, please enter a valid model source using /source or changing the .env file")
+            raise ValueError(f"Invalid model: {settings.model}, please enter a valid model by using /model or changing the .env file")
 
 client = Client()
 
 class CommandHandler:
-    def _model(self, args: str | None):
-        if settings.model_source == "anthropic":
-            settings.model = qt.select(
-                "Select a model",
-                [m.id for m in client.client().models.list()]
-            ).ask()
-            console.print(f"[ok]Changed model to {settings.model}[/]")
-        elif args:
-            settings.model = args
-            console.print(f"[ok]Changed model to {args}[/]")
-        else:
-            console.print(f"[err]Please provide a model string while using openrouter[/]")
+    def _model(self):
+        console.print(f"[ok]Current model: {settings.model}[/]")
+        try:
+            r = session.get(
+                "https://openrouter.ai/api/v1/models",
+                params={"sort": "intelligence-high-to-low"}
+            )
+            r.raise_for_status()
+        except httpx.HTTPError as e:
+            console.print(f"[err]Failed fetching openrouter models: {e}[/]")
 
-    def _models(self):
-        console.print(f"[ok]Current model: {settings.model}[/]\n")
-        if settings.model_source == "openrouter":
-            try:
-                r = client.client()._client.get(
-                    "https://openrouter.ai/api/v1/models",
-                    params={"sort": "intelligence-high-to-low"}
-                )
-                r.raise_for_status()
-            except httpx.HTTPError as e:
-                console.print(f"[err]Failed fetching openrouter models: {e}[/]")
-                return True
+        free, paid = [], []
+        for m in r.json()["data"]:
+            if m["id"].endswith(":batch"):
+                continue
+            p = m.get("pricing", {})
+            is_free = not any(float(p.get(k) or 0) for k in ("prompt", "completion", "request"))
+            (free if is_free else paid).append(m["id"])
 
-            free, paid = [], []
-            for m in r.json()["data"]:
-                if m["id"].endswith(":batch"):
-                    continue
-                p = m.get("pricing", {})
-                is_free = not any(float(p.get(k) or 0) for k in ("prompt", "completion", "request"))
-                (free if is_free else paid).append(m["id"])
+        choices = [
+            qt.Separator("---Anthropic---"),
+            *[qt.Choice(title=m.display_name, value=m.id) for m in client.client("anthropic").models.list()],
+            qt.Separator("---Paid---"),
+            *[qt.Choice(title=m, value=m) for m in paid[:5]],
+            qt.Separator("---Free---"),
+            *[qt.Choice(title=m, value=m) for m in free[:5]],
+        ]
 
-            sep = "\n  "
-            console.print(f"[accent]Openrouter models:[/]\n\n[accent]Top 5 free:[/]\n  [body]{sep.join(free[:5])}[/]\n\n[accent]Top 10 paid:[/]\n  [body]{sep.join(paid[:10])}[/]")
-        elif settings.model_source == "anthropic":
-            sep = "\n  "
-            console.print(f"[accent]Anthropic models:[/]\n  [body]{sep.join(m.id for m in client.client().models.list())}[/]")
+        settings.model = qt.select("Select a model", choices=choices).ask()
 
     def _mode(self, args: str | None):
         if args:
@@ -184,13 +178,6 @@ class CommandHandler:
             console.print(f"[ok]Changed mode to {settings.mode}[/]")
         else:
             console.print(f"[body]Current mode: {settings.mode} (available: 'manual', 'auto')[/]")
-
-    def _source(self, args: str | None):
-        if args:
-            settings.model_source = args
-            console.print(f"[ok]Changed model source to {args}[/]")
-        else:
-            console.print(f"[body]Current model source: {settings.model_source}[/]")
 
     def _tools(self):
         tools = _tools.tools()
@@ -218,13 +205,7 @@ class CommandHandler:
         args = args.strip()
 
         if cmd == "model":
-            return self._model(args=args)
-        
-        if cmd == "models":
-            self._models()
-        
-        elif cmd == "source":
-            self._source(args=args)
+            return self._model()
 
         elif cmd == "tools":
             self._tools()
@@ -383,13 +364,15 @@ class Assistant:
 
             if final:
                 u = final.usage
-                usage = u.input_tokens + u.output_tokens
+
+                stats['session_input_tokens'] += u.input_tokens
+                stats['session_output_tokens'] += u.output_tokens
 
                 cost = (
-                    u.input_tokens * 2
-                    + u.output_tokens * 10) / 1_000_000
+                    stats['session_input_tokens'] * 2
+                    + stats['session_output_tokens'] * 10) / 1_000_000
 
-                console.print(f"[dim]Used {usage} billing tokens (sonnet: ${cost:.3f})[/]")
+                console.print(f"[dim]{settings.model} · {settings.mode} · session: ${cost:.3f} ($2, $10)[/]")
 
 def main():
     parser = argparse.ArgumentParser(

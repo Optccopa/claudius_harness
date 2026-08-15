@@ -48,7 +48,18 @@ tools = [
                     "description": "Max allowed choices the user can provide, default: 1"
                 }
             }
-        } 
+        },
+        "input_examples": [
+            {
+                "question": "What httplib should i use?",
+                "choices": ["aiohttp", "requests (blocking)", "stdlib (blocking)"]
+            },
+            {
+                "question": "What should i fix right now?",
+                "choices": ["Offset fov", "Bullet clipping", "StackOverflow in main"],
+                "max_answers": 3
+            }
+        ] 
     },
     {
         "name": "powershell",
@@ -103,7 +114,17 @@ tools = [
                     "minimum": 1
                 }
             }
-        }
+        },
+        "input_examples": [
+            {
+                "path": r"C:\Users\Copa\Documents\GitHub\ClaudiusCraft\game.py",
+                "start_line": 22,
+                "end_line": 52
+            },
+            {
+                "path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\main.py"
+            }
+        ]
     },
     {
         "name": "edit_file",
