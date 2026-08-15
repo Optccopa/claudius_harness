@@ -1,12 +1,11 @@
 import difflib
-import questionary as qt
 import subprocess
 import os
 from pathlib import Path
+
+import questionary as qt
 from rich.console import Console
 from rich.theme import Theme
-from rich.tree import Tree
-from rich import print
 
 theme = Theme({
     "body":   "#e8e3d8",
