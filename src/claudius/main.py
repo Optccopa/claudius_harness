@@ -43,6 +43,8 @@ class Settings:
         self.model_source = os.getenv("MODEL_SOURCE") or "anthropic"
         self.model = os.getenv("MODEL") or "claude-sonnet-5"
 
+        self.mode = "manual"
+
         self.tools_file = Path("tools.py")
         self.system_file = self.base_dir / "SYSTEM.md"
 
@@ -176,6 +178,13 @@ class CommandHandler:
             sep = "\n  "
             console.print(f"[accent]Anthropic models:[/]\n  [body]{sep.join(m.id for m in client.client().models.list())}[/]")
 
+    def _mode(self, args: str | None):
+        if args:
+            settings.mode = args or "manual"
+            console.print(f"[ok]Changed mode to {settings.mode}[/]")
+        else:
+            console.print(f"[body]Current mode: {settings.mode} (available: 'manual', 'auto')[/]")
+
     def _source(self, args: str | None):
         if args:
             settings.model_source = args
@@ -225,6 +234,10 @@ class CommandHandler:
 
         elif cmd == "load":
             self._load(args=args)
+
+        elif cmd == "mode":
+            self._mode(args=args)
+
         else:
             console.print(f"[err]Command not found: {cmd}[/]")
 
@@ -257,7 +270,7 @@ class Assistant:
                     try:
                         with client.client().messages.stream(
                             model=settings.model,
-                            max_tokens=2048,
+                            max_tokens=8192,
                             system=messages.sys_prompt(),
                             tools=_tools.tools(),
                             messages=messages.messages
@@ -328,7 +341,7 @@ class Assistant:
                         console.print(f"[dim]  ▪ {block.name}  {suffix}[/]")
 
                         try:
-                            output = _tools.named_tool_functions[block.name](**block.input)
+                            output = _tools.named_tool_functions[block.name](**block.input, mode=settings.mode)
                             is_error = False
                         except KeyboardInterrupt:
                             output, is_error, aborted = "Interrupted by user.", True, True

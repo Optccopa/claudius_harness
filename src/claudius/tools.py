@@ -256,13 +256,18 @@ tools = [
 class RejectedToolUse(Exception):
     """Your tool use was manually rejected by the user"""
 
-def _raise_for_permission(label: str):
-    ok = qt.confirm(
-        f"Claude wants to run {label}",
-        default=True,
-    ).ask()
-    if not ok:
-        raise RejectedToolUse(f"Your tool use was rejected, {label}")
+def _raise_for_permission(label: str, mode: str):
+    if mode == "auto":
+        print(f"Claude ran `{label}` (auto)")
+        return
+    
+    else:
+        ok = qt.confirm(
+            f"Claude wants to run `{label}`",
+            default=True,
+        ).ask()
+        if not ok:
+            raise RejectedToolUse(f"Your tool use was rejected, {label}")
 
 def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
     old_lines = old.splitlines()
@@ -288,7 +293,7 @@ def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
                     shown += 1
     console.print()
 
-def ask_user_question(question: str, choices: list, max_answers: int = 1):
+def ask_user_question(question: str, choices: list, max_answers: int = 1, **kwargs):
     choices = list(choices) + ["Other"]
     response = qt.checkbox(
         question,
@@ -301,8 +306,8 @@ def ask_user_question(question: str, choices: list, max_answers: int = 1):
     else:
         return response
 
-def powershell(command: str, timeout: int = 60) -> str:
-    _raise_for_permission(command)
+def powershell(command: str, timeout: int = 60, **kwargs) -> str:
+    _raise_for_permission(command, kwargs.get("mode"))
     try:
         r = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", command],
@@ -320,7 +325,7 @@ def powershell(command: str, timeout: int = 60) -> str:
         return f"exit {r.returncode}\n{out}"
     return out or "(no output)"
 
-def read_file(path: str, start_line: int = 0, end_line: int | None = None):
+def read_file(path: str, start_line: int = 0, end_line: int | None = None, **kwargs):
     with open(path, encoding="utf-8") as f:
         lines = f.readlines()
 
@@ -375,12 +380,26 @@ def edit_file(path: str, old_string: str = "", new_string: str = "",
     updated = text.replace(old_string, new_string)
 
     _show_diff(text, updated)
-    _raise_for_permission(f"edit {p.name}")
+    _raise_for_permission(f"edit {p.name}", kwargs.get("mode"))
 
     p.write_text(updated, encoding="utf-8")
     return f"Edited {path} ({count} replacement{'s' if count != 1 else ''})"
 
-def tree(path: str = ".", prefix: str = "") -> str:
+def create_file(path: str | Path, **kwargs):
+    _raise_for_permission(kwargs.get(f"create_file {path}", kwargs.get("mode")))
+    path = Path(path)
+    if path.exists():
+        return f"{path.resolve()} already exists. Use edit_file to modify it."
+    
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    except OSError as e:
+        return f"Could not create {path}: {e}"
+    
+    return (f"Created file at {path.resolve()}")
+
+def tree(path: str = ".", prefix: str = "", **kwargs) -> str:
     entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
     entries = [e for e in entries if not e.name.startswith(".")]
     out = []
@@ -391,7 +410,7 @@ def tree(path: str = ".", prefix: str = "") -> str:
             out.append(tree(e, prefix + ("    " if last else "|   ")))
     return "\n".join(filter(None, out))
 
-def glob(pattern: str, path: str = str(Path().absolute().resolve())) -> str:
+def glob(pattern: str, path: str = str(Path().resolve()), **kwargs) -> str:
     root = Path(path)
     if not root.is_dir():
         return f"Not a directory: {path}"
@@ -409,7 +428,7 @@ def glob(pattern: str, path: str = str(Path().absolute().resolve())) -> str:
 
 def grep(pattern: str, path: str = ".", glob_filter: str = "**/*",
          case_insensitive: bool = False, files_only: bool = False,
-         context: int = 0) -> str:
+         context: int = 0, **kwargs) -> str:
     try:
         rx = re.compile(pattern, re.IGNORECASE if case_insensitive else 0)
     except re.error as e:
