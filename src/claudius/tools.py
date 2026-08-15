@@ -407,7 +407,7 @@ def edit_file(path: str, old_string: str = "", new_string: str = "",
     return f"Edited {path} ({count} replacement{'s' if count != 1 else ''})"
 
 def create_file(path: str | Path, **kwargs):
-    _raise_for_permission(kwargs.get(f"create_file {path}", kwargs.get("mode")))
+    _raise_for_permission(f"create_file {path}", mode=kwargs.get("mode"))
     path = Path(path)
     if path.exists():
         return f"{path.resolve()} already exists. Use edit_file to modify it."

@@ -152,6 +152,7 @@ class CommandHandler:
             r.raise_for_status()
         except httpx.HTTPError as e:
             console.print(f"[err]Failed fetching openrouter models: {e}[/]")
+            return
 
         free, paid = [], []
         for m in r.json()["data"]:
