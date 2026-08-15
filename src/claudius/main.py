@@ -50,8 +50,7 @@ class Settings:
         self.model = os.getenv("MODEL") or "claude-sonnet-5"
 
         self.mode = "manual"
-
-        self.tools_file = Path("tools.py")
+        
         self.system_file = self.base_dir / "SYSTEM.md"
 
         self.chats_dir = self.base_dir / "chats"

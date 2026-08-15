@@ -163,6 +163,35 @@ tools = [
         }
     },
     {
+        "name": "create_file",
+        "description": (
+            "Create a new empty file at the given path.\n"
+            "Fails if the file already exists — use edit_file to modify it instead.\n"
+            "Parent directories are created automatically if missing.\n"
+            "The user is shown a permission prompt and asked to approve. If denied, "
+            "do not retry — ask the user what they'd prefer instead."
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The file to create, provide a global directory"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The content that is written to the file on creation"
+                }
+            }
+        },
+        "input_examples": [
+            {
+                "path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\new_module.py"
+            }
+        ]
+    },
+    {
         "name": "tree",
         "description": (
             "Recursively list contents of a directory as a tree\n"
@@ -406,7 +435,7 @@ def edit_file(path: str, old_string: str = "", new_string: str = "",
     p.write_text(updated, encoding="utf-8")
     return f"Edited {path} ({count} replacement{'s' if count != 1 else ''})"
 
-def create_file(path: str | Path, **kwargs):
+def create_file(path: str | Path, content: str | None = None, **kwargs):
     _raise_for_permission(f"create_file {path}", mode=kwargs.get("mode"))
     path = Path(path)
     if path.exists():
@@ -417,6 +446,9 @@ def create_file(path: str | Path, **kwargs):
         path.touch()
     except OSError as e:
         return f"Could not create {path}: {e}"
+
+    with open(path, "w") as f:
+        f.write(content)
     
     return (f"Created file at {path.resolve()}")
 
