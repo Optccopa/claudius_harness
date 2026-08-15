@@ -285,6 +285,8 @@ class Assistant:
                         pass
 
                     print()
+                    if final.stop_reason == "max_tokens":
+                        console.print("[warn]    hit max_tokens, reply truncated[/]")
 
                     if final is None:
                         partial = "".join(parts).strip()
