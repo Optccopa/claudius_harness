@@ -27,7 +27,7 @@ theme = Theme({
     "err":    "#d9605a",
 })
 
-console = Console(theme=theme, highlight=False)
+console = Console(theme=theme, highlight=False, width=200)
 
 class Settings:
     def __init__(self):
@@ -364,15 +364,13 @@ class Assistant:
 
             if final:
                 u = final.usage
-                usage = 0
-                usage += u.input_tokens
-                usage += u.output_tokens
+                usage = u.input_tokens + u.output_tokens
 
                 cost = (
                     u.input_tokens * 2
                     + u.output_tokens * 10) / 1_000_000
 
-            console.print(f"[dim]Used {usage} billing tokens (sonnet: ${cost:.3f})[/]")
+                console.print(f"[dim]Used {usage} billing tokens (sonnet: ${cost:.3f})[/]")
 
 def run():
     Assistant().chat()

@@ -171,11 +171,9 @@ def _raise_for_permission(label: str):
     if not ok:
         raise RejectedToolUse(f"Your tool use was rejected, {label}")
 
-def _show_diff(old: str, new: str, name: str, max_lines: int = 40) -> None:
+def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
     old_lines = old.splitlines()
     new_lines = new.splitlines()
-
-    console.print(f"[dim]{name}[/]")
 
     shown = 0
     for group in difflib.SequenceMatcher(None, old_lines, new_lines).get_grouped_opcodes(3):
@@ -198,7 +196,7 @@ def _show_diff(old: str, new: str, name: str, max_lines: int = 40) -> None:
     console.print()
 
 def ask_user_question(question: str, choices: list, max_answers: int = 1):
-    choices.append("Other")
+    choices = list(choices) + ["Other"]
     response = qt.checkbox(
         question,
         set(choices),
@@ -283,7 +281,7 @@ def edit_file(path: str, old_string: str = "", new_string: str = "",
 
     updated = text.replace(old_string, new_string)
 
-    _show_diff(text, updated, p.name)
+    _show_diff(text, updated)
     _raise_for_permission(f"edit {p.name}")
 
     p.write_text(updated, encoding="utf-8")
