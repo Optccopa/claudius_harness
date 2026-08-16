@@ -59,39 +59,10 @@ tools = [
                 "choices": ["Offset fov", "Bullet clipping", "StackOverflow in main"],
                 "max_answers": 3
             }
-        ] 
+        ]
     },
     {
-        "name": "powershell",
-        "description": (
-            "Run a powershell command and return its combined stdout and stderr.\n\n"
-            "Each call runs in a fresh shell rooted at the workspace directory. "
-            "`cd` does NOT persist between calls, so chain with && or use absolute "
-            "paths when a command depends on a directory change.\n"
-            "Never use this to read files unless you cannot use read_file\n"
-            "Never use this to edit files unless you cannot use edit_file\n"
-            "commands will prompt the user for approval. If a command is denied, do not retry it — ask "
-            "the user what they'd prefer instead."
-        ),
-        "input_schema": {
-            "type": "object",
-            "required": ["command"],
-            "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "The shell command to run. Quote paths containing spaces.",
-                },
-                "timeout": {
-                    "type": "integer",
-                    "description": "Seconds before the command is killed. default: 120.",
-                    "minimum": 1,
-                    "maximum": 600,
-                },
-            },
-        },
-    },
-    {
-        "name": "read_file", 
+        "name": "read_file",
         "description": (
             "Read file lines using a global directory and line numbers\n"
             "Returns lines with line numbers"
@@ -124,73 +95,6 @@ tools = [
             },
             {
                 "path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\main.py"
-            }
-        ]
-    },
-    {
-        "name": "edit_file",
-        "description": (
-            "Replace an exact string in a file.\n"
-            "old_string must match the file byte-for-byte including whitespace and "
-            "indentation, and must appear exactly once — include surrounding lines "
-            "for context if needed.\n"
-            "This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
-            "Reach for powershell if nothing else without permission requirements fits\n"
-            "Do NOT include the line numbers that read_file prefixes to its output.\n"
-            "Fails without modifying anything if the match is missing or ambiguous.\n"
-            "Always read_file first so you are matching against actual content.\n"
-            "The user is shown a diff and asked to approve. If denied, do not retry — "
-            "ask the user what they'd prefer instead."
-        ),
-        "input_schema": {
-            "type": "object",
-            "required": ["path", "old_string", "new_string"],
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "The file to edit, provide a global directory"
-                },
-                "old_string": {
-                    "type": "string",
-                    "description": "Exact text to replace, without line numbers"
-                },
-                "new_string": {
-                    "type": "string",
-                    "description": "Text to replace it with"
-                },
-                "replace_all": {
-                    "type": "boolean",
-                    "description": "Replace every occurrence instead of requiring uniqueness. default: false"
-                }
-            }
-        }
-    },
-    {
-        "name": "create_file",
-        "description": (
-            "Create a new empty file at the given path.\n"
-            "Fails if the file already exists — use edit_file to modify it instead.\n"
-            "Parent directories are created automatically if missing.\n"
-            "The user is shown a permission prompt and asked to approve. If denied, "
-            "do not retry, ask the user what they'd prefer instead."
-        ),
-        "input_schema": {
-            "type": "object",
-            "required": ["path"],
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "The file to create, provide a global directory"
-                },
-                "content": {
-                    "type": "string",
-                    "description": "The content that is written to the file on creation"
-                }
-            }
-        },
-        "input_examples": [
-            {
-                "path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\new_module.py"
             }
         ]
     },
@@ -339,6 +243,101 @@ tools = [
                 }
             }
         }
+    },
+    {
+        "name": "powershell",
+        "description": (
+            "Run a powershell command and return its combined stdout and stderr.\n\n"
+            "Each call runs in a fresh shell rooted at the workspace directory. "
+            "`cd` does NOT persist between calls, so chain with && or use absolute "
+            "paths when a command depends on a directory change.\n"
+            "Never use this to read files unless you cannot use read_file\n"
+            "Never use this to edit files unless you cannot use edit_file\n"
+            "commands will prompt the user for approval. If a command is denied, do not retry it — ask "
+            "the user what they'd prefer instead."
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": ["command"],
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "The shell command to run. Quote paths containing spaces.",
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Seconds before the command is killed. default: 120.",
+                    "minimum": 1,
+                    "maximum": 600,
+                },
+            },
+        },
+    },
+    {
+        "name": "edit_file",
+        "description": (
+            "Replace an exact string in a file.\n"
+            "old_string must match the file byte-for-byte including whitespace and "
+            "indentation, and must appear exactly once — include surrounding lines "
+            "for context if needed.\n"
+            "Do NOT include the line numbers that read_file prefixes to its output.\n"
+            "Fails without modifying anything if the match is missing or ambiguous.\n"
+            "Always read_file first so you are matching against actual content.\n"
+            "The user is shown a diff and asked to approve. If denied, do not retry — "
+            "ask the user what they'd prefer instead."
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": ["path", "old_string", "new_string"],
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The file to edit, provide a global directory"
+                },
+                "old_string": {
+                    "type": "string",
+                    "description": "Exact text to replace, without line numbers"
+                },
+                "new_string": {
+                    "type": "string",
+                    "description": "Text to replace it with"
+                },
+                "replace_all": {
+                    "type": "boolean",
+                    "description": "Replace every occurrence instead of requiring uniqueness. default: false"
+                }
+            }
+        }
+    },
+    {
+        "name": "create_file",
+        "description": (
+            "Create a new empty file at the given path.\n"
+            "Fails if the file already exists — use edit_file to modify it instead.\n"
+            "Parent directories are created automatically if missing.\n"
+            "The user is shown a permission prompt and asked to approve. If denied, "
+            "do not retry, ask the user what they'd prefer instead."
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The file to create, provide a global directory"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The content that is written to the file on creation"
+                }
+            }
+        },
+        "input_examples": [
+            {
+                "path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\new_module.py",
+                "content": "This content gets written in the file"
+            }
+        ]
     }
 ]
 
@@ -349,7 +348,7 @@ def _raise_for_permission(label: str, mode: str):
     if mode == "auto":
         print(f"Claude ran `{label}` (auto)")
         return
-    
+
     else:
         ok = qt.confirm(
             f"Claude wants to run `{label}`",
@@ -489,7 +488,7 @@ def create_file(path: str | Path, content: str | None = None, **kwargs):
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(content or "")
-    
+
     return (f"Created file at {path.resolve()}")
 
 def tree(path: str = ".", prefix: str = "", **kwargs) -> str:
