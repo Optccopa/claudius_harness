@@ -28,7 +28,7 @@ tools = [
     },
     {
         "name": "ask_user_question",
-        "description": "Ask a question to the user to clarify ambigous prompts, Use this almost every prompt",
+        "description": "Ask a question in a structured format, reach for this when you need clarification",
         "input_schema": {
             "type": "object",
             "required": ["question", "choices"],
@@ -93,7 +93,8 @@ tools = [
     {
         "name": "read_file", 
         "description": (
-            "Read file lines using a global directory and line numbers\nReturns lines with line numbers"
+            "Read file lines using a global directory and line numbers\n"
+            "Returns lines with line numbers"
         ),
         "input_schema": {
             "type": "object",
@@ -133,6 +134,8 @@ tools = [
             "old_string must match the file byte-for-byte including whitespace and "
             "indentation, and must appear exactly once — include surrounding lines "
             "for context if needed.\n"
+            "This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
+            "Reach for powershell if nothing else without permission requirements fits\n"
             "Do NOT include the line numbers that read_file prefixes to its output.\n"
             "Fails without modifying anything if the match is missing or ambiguous.\n"
             "Always read_file first so you are matching against actual content.\n"
@@ -169,7 +172,7 @@ tools = [
             "Fails if the file already exists — use edit_file to modify it instead.\n"
             "Parent directories are created automatically if missing.\n"
             "The user is shown a permission prompt and asked to approve. If denied, "
-            "do not retry — ask the user what they'd prefer instead."
+            "do not retry, ask the user what they'd prefer instead."
         ),
         "input_schema": {
             "type": "object",
@@ -212,6 +215,8 @@ tools = [
         "name": "glob",
         "description": (
             "- Fast file pattern matching tool that works with any codebase size\n"
+            "- This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
+            "- Reach for powershell if nothing else without permission requirements fits\n"
             "- Supports glob patterns like \"**/*.py\" or \"src/**/*.ts\"\n"
             "- Returns matching file paths sorted by modification time, newest first\n"
             "- Use this tool when you need to find files by name patterns\n"
@@ -245,6 +250,8 @@ tools = [
         "description": (
             "- Fast content search tool that works with any codebase size\n"
             "- Searches file contents using regular expressions\n"
+            "- This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
+            "- Reach for powershell if nothing else without permission requirements fits\n"
             "- Supports full regex syntax (e.g. \"log.*Error\", \"def\\\\s+\\\\w+\")\n"
             "- Filter which files are searched with glob_filter (e.g. \"**/*.py\")\n"
             "- Returns matching lines with line numbers\n"
@@ -297,6 +304,38 @@ tools = [
                         "Lines of context to show before and after each match. Default 0. "
                         "Ignored when files_only is true."
                     )
+                }
+            }
+        }
+    },
+    {
+        "name": "git_status",
+        "description": (
+            "Show working tree status via `git status --porcelain`.\n"
+            "This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
+            "Reach for powershell if nothing else without permission requirements fits"
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": [],
+            "properties": {}
+        }
+    },
+    {
+        "name": "git_diff",
+        "description": (
+            "Show unstaged changes for a single file via `git diff <file_name>`.\n"
+            "Only shows changed since last commit\n"
+            "This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
+            "Reach for powershell if nothing else without permission requirements fits"
+        ),
+        "input_schema": {
+            "type": "object",
+            "required": ["file_name"],
+            "properties": {
+                "file_name": {
+                    "type": "string",
+                    "description": "Path to the file to diff, relative to the repo root"
                 }
             }
         }
@@ -436,19 +475,20 @@ def edit_file(path: str, old_string: str = "", new_string: str = "",
     return f"Edited {path} ({count} replacement{'s' if count != 1 else ''})"
 
 def create_file(path: str | Path, content: str | None = None, **kwargs):
-    _raise_for_permission(f"create_file {path}", mode=kwargs.get("mode"))
     path = Path(path)
     if path.exists():
         return f"{path.resolve()} already exists. Use edit_file to modify it."
-    
+
+    _raise_for_permission(f"create_file {path}", mode=kwargs.get("mode"))
+
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
     except OSError as e:
         return f"Could not create {path}: {e}"
 
-    with open(path, "w") as f:
-        f.write(content)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content or "")
     
     return (f"Created file at {path.resolve()}")
 
@@ -516,4 +556,28 @@ def grep(pattern: str, path: str = ".", glob_filter: str = "**/*",
             hits.append(f"\n[truncated, {count}+ matches]")
             break
 
-    return "\n".join(hits) if hits else f"No matches for {pattern}"
+def _git_run(command: list[str], timeout: int = 60, **kwargs) -> str:
+    try:
+        r = subprocess.run(
+            command,
+            cwd=os.getcwd(), capture_output=True, text=True, errors="replace",
+            timeout=min(timeout, 600),
+        )
+    except subprocess.TimeoutExpired:
+        return f"Timed out after {timeout}s. Use a longer timeout for long tasks."
+
+    out = (r.stdout + r.stderr).strip()
+    if len(out) > 30_000:
+        out = out[:15_000] + f"\n\n[... {len(out) - 30_000} chars elided ...]\n\n" + out[-15_000:]
+
+    if r.returncode != 0:
+        return f"exit {r.returncode}\n{out}"
+    return out or "(no output)"
+
+def git_status(**kwargs) -> str:
+    out = _git_run(["git", "status", "--porcelain"])
+    return out or "(no output)"
+
+def git_diff(file_name: str, **kwargs) -> str:
+    out = _git_run(["git", "diff", file_name])
+    return out or "(no output)"

@@ -362,6 +362,11 @@ class Assistant:
                 del messages.messages[snapshot:]
                 continue
 
+            except ValueError as e:
+                console.print(f"[err]{e}[/]")
+                del messages.messages[snapshot:]
+                continue
+
             if final:
                 u = final.usage
 
