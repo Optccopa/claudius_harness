@@ -412,9 +412,6 @@ class Assistant:
                     except KeyboardInterrupt:
                         pass
 
-                    if final.stop_reason == "max_tokens":
-                        console.warn("    hit max_tokens, reply truncated")
-
                     if final is None:
                         partial = "".join(parts).strip()
                         if partial:
@@ -426,6 +423,9 @@ class Assistant:
                             del messages.messages[snapshot:]
                         console.dim(" interrupted")
                         break
+
+                    if final.stop_reason == "max_tokens":
+                        console.warn("    hit max_tokens, reply truncated")
 
                     messages.messages.append({"role": "assistant", "content": final.content})
 
