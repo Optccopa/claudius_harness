@@ -20,8 +20,6 @@ from rich.theme import Theme
 
 from claudius import tools
 
-load_dotenv()
-
 stats = {
     "session_input_tokens": 0,
     "session_output_tokens": 0
@@ -329,6 +327,9 @@ class Assistant:
                     user_input, first = first, None
                 else:
                     user_input = console.input() # Default 'you:'
+
+                if user_input is None:
+                    break
 
                 if user_input.startswith("/"):
                     self.handler.parse(user_input)

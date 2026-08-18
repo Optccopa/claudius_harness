@@ -555,6 +555,10 @@ def grep(pattern: str, path: str = ".", glob_filter: str = "**/*",
             hits.append(f"\n[truncated, {count}+ matches]")
             break
 
+    if not hits:
+        return f"No matches for {pattern}"
+    return "\n".join(hits)
+
 def _git_run(command: list[str], timeout: int = 60, **kwargs) -> str:
     try:
         r = subprocess.run(
