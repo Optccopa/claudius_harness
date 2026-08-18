@@ -389,6 +389,9 @@ def ask_user_question(question: str, choices: list, max_answers: int = 1, **kwar
         validate=lambda sel: True if len(sel) <= max_answers else f"Pick at most {max_answers}"
     ).ask()
 
+    if not response:
+        return "User provided an empty answer."
+
     if response[0] == "Other":
         return qt.text("What else?").ask()
     else:
