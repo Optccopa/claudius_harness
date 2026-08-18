@@ -1,24 +1,24 @@
 """
 Main CLI assistant, run with `claudius "hello"`
 """
-import os
+import argparse
 import datetime
 import inspect
 import json
-import argparse
-import shutil
-from platformdirs import user_data_dir
+import os
 from pathlib import Path
-from dotenv import load_dotenv
-
-from claudius import tools
+import shutil
 
 import anthropic
+from dotenv import load_dotenv
 import httpx
+from platformdirs import user_data_dir
 import questionary as qt
 from rich.console import Console as RichConsole
 from rich.markdown import Markdown
 from rich.theme import Theme
+
+from claudius import tools
 
 load_dotenv()
 
@@ -141,7 +141,7 @@ class Messages:
 
         time = now.strftime("%Y-%m-%d %I:%M %p")
 
-        with open(settings.system_file) as f:
+        with open(settings.system_file, encoding="utf-8") as f:
             system = f.read()
 
         system = system.replace("{model}", settings.model)

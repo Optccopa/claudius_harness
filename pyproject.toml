@@ -7,16 +7,13 @@ name = "claudius"
 version = "0.1.0"
 description = "Claudius cli assistant"
 requires-python = ">=3.13"
-dependencies = [
-    "anthropic",
-    "rich",
-    "httpx",
-    "python-dotenv",
-    "questionary",
-]
+dynamic = ["dependencies"]
 
 [project.scripts]
 claudius = "claudius.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
