@@ -1,3 +1,6 @@
+"""
+Main CLI assistant, run with `claudius "hello"`
+"""
 import os
 import datetime
 import inspect
@@ -89,7 +92,7 @@ class Console:
             self._print(f"    {line}", style=style)
 
 console = Console()
-    
+
 class Settings:
     def __init__(self):
         self.base_dir = Path(__file__).resolve().parent.parent.parent
@@ -119,7 +122,7 @@ class Settings:
         self.model = os.getenv("MODEL") or "claude-sonnet-5"
 
         self.mode = "manual"
-        
+
         self.system_file = self.base_dir / "SYSTEM.md"
 
         self.chats_dir = self.claudius_dir / "chats"
@@ -184,6 +187,7 @@ class Tools:
             for name, fn in inspect.getmembers(tools, inspect.isfunction)
             if fn.__module__ == tools.__name__ and not name.startswith("_")
         }
+
     def tools(self) -> list:
         return tools.tools
 
@@ -195,12 +199,12 @@ class Client:
     def __init__(self):
         self._anthropic = None
         self._openrouter = None
-    
+
     def client(self, source: str | None = None):
-        if "/" not in settings.model or source == "anthropic":
+        if source == "anthropic" or "/" not in settings.model:
             if not settings.anthropic_api_key:
                 raise ValueError("Failed loading anthropic api key, set ANTHROPIC_API_KEY in .env")
-            
+
             if not self._anthropic:
                 self._anthropic = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
@@ -209,7 +213,7 @@ class Client:
         elif "/" in settings.model:
             if not settings.openrouter_api_key:
                 raise ValueError("Failed loading openrouter api key, set OPENROUTER_API_KEY in .env")
-            
+
             if not self._openrouter:
                 self._openrouter = anthropic.Anthropic(
                     api_key=settings.openrouter_api_key,
@@ -218,7 +222,7 @@ class Client:
                 )
 
                 console.dim(f"Loaded {settings.model}")
-                
+
             return self._openrouter
 
         else:
@@ -290,7 +294,7 @@ class CommandHandler:
     def _load(self, args: str | None):
         messages.load(f"{settings.chats_dir}/chat-{args}.json")
         console.success("Loaded messages")
-    
+
     def parse(self, user_input: str = "/") -> bool:
         cmd, _, args = user_input.removeprefix("/").partition(" ")
         cmd = cmd.lower()
@@ -324,7 +328,7 @@ class Assistant:
                 if first:
                     user_input, first = first, None
                 else:
-                    user_input = console.input() # Default 'you:' 
+                    user_input = console.input() # Default 'you:'
 
                 if user_input.startswith("/"):
                     self.handler.parse(user_input)
@@ -449,7 +453,7 @@ class Assistant:
             except anthropic.RateLimitError as e:
                 console.error(e.message)
                 messages.save_exc(type(e).__name__, snapshot)
-            
+
             except anthropic.APIStatusError as e:
                 console.error(e.body["error"]["message"])
                 messages.save_exc(type(e).__name__, snapshot)
