@@ -58,7 +58,7 @@ def chat(first: str | None = None):
                 try:
                     with client.client().messages.stream(
                         model=settings.model,
-                        max_tokens=8192,
+                        max_tokens=32768,
                         system=messages.sys_prompt(),
                         tools=tools.tools,
                         messages=messages.messages
