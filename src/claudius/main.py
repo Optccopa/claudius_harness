@@ -6,7 +6,7 @@ import inspect
 import anthropic
 from rich.markdown import Markdown
 
-from claudius.tools import tools
+from claudius import tools
 
 from claudius.console import console
 from claudius.settings import settings
@@ -60,7 +60,7 @@ def chat(first: str | None = None):
                         model=settings.model,
                         max_tokens=8192,
                         system=messages.sys_prompt(),
-                        tools=tools,
+                        tools=tools.tools,
                         messages=messages.messages
                     ) as stream:
                         buf = ""
