@@ -4,6 +4,7 @@ Main CLI assistant, run with `claudius "hello"`
 import argparse
 import datetime
 import inspect
+import platform
 import json
 import os
 from pathlib import Path
@@ -81,9 +82,10 @@ class Messages:
         with open(settings.system_file, encoding="utf-8") as f:
             system = f.read()
 
-        system = system.replace("{model}", settings.model)
-        system = system.replace("{time}", time)
-        system = system.replace("{dir}", str(Path().resolve()))
+        system = system.replace("{{model}}", settings.model)
+        system = system.replace("{{time}}", time)
+        system = system.replace("{{dir}}", str(Path().resolve()))
+        system = system.replace("{{platform}}", platform.system() or "Undetermined")
 
         return system
 
