@@ -92,3 +92,5 @@ class Console:
     def warn(self, msg):    self._print(msg, style="warn")
     def error(self, msg):   self._print(msg, style="err")
     def dim(self, msg):     self._print(msg, style="dim")
+
+console = Console()

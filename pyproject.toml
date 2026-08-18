@@ -10,7 +10,7 @@ requires-python = ">=3.13"
 dynamic = ["dependencies"]
 
 [project.scripts]
-claudius = "claudius.main:main"
+claudius = "claudius.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

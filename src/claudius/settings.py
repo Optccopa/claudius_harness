@@ -42,3 +42,5 @@ class Settings:
             raise SystemExit(
                 f"{self.env_file} must have either OPENROUTER_API_KEY or ANTHROPIC_API_KEY defined"
             )
+
+settings = Settings()
