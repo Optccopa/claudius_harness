@@ -69,6 +69,24 @@ class Console:
 
     def renderable(self, msg, **kwargs):  self._rich.print(msg, **kwargs)
 
+    def tool_result(self, output, is_error: bool = False,
+                     max_lines: int = 12, max_chars: int = 2000) -> None:
+        text = str(output).strip()
+        if not text:
+            return
+
+        if len(text) > max_chars:
+            text = text[:max_chars] + f"\n… [{len(text) - max_chars} more chars]"
+
+        lines = text.splitlines()
+        if len(lines) > max_lines:
+            hidden = len(lines) - max_lines
+            lines = lines[:max_lines] + [f"… [{hidden} more lines]"]
+
+        style = "err" if is_error else "dim"
+        for line in lines:
+            self._print(f"    {line}", style=style)
+
 console = Console()
     
 class Settings:
@@ -366,12 +384,14 @@ class Assistant:
                             is_error = False
                         except KeyboardInterrupt:
                             output, is_error, aborted = "Interrupted by user.", True, True
-                            console.error("\n    \\ tool use interrupted")
                         except TypeError as e:
                             output = f"{e}. Check the tool's input_schema for exact parameter names."
                             is_error = True
                         except Exception as e:
                             output, is_error = f"{type(e).__name__}: {e}", True
+
+                        if block.name != "read_file":
+                            console.tool_result(output, is_error)
 
                         results.append({
                             "type": "tool_result",
