@@ -20,12 +20,12 @@ from rich.theme import Theme
 
 from claudius import tools
 
-stats = {
-    "session_input_tokens": 0,
-    "session_output_tokens": 0
-}
+SILENT = [
+    "read_file",
+    "ask_user_question"
+]
 
-colors = {
+COLORS = {
     "body":   "#e8e3d8",
     "accent": "#D97757",
     "dim":    "#8a8175",
@@ -37,12 +37,17 @@ colors = {
     "markdown.code": "#D97757"
 }
 
+stats = {
+    "session_input_tokens": 0,
+    "session_output_tokens": 0
+}
+
 session = httpx.Client()
 
 class Console:
     def __init__(self):
         self._rich = RichConsole(
-            theme=Theme(colors),
+            theme=Theme(COLORS),
             highlight=False,
             width=min(shutil.get_terminal_size((80, 24)).columns, 100)
         )
@@ -62,14 +67,27 @@ class Console:
         except (KeyboardInterrupt, EOFError):
             return None
 
-    # semantics
-    def info(self, msg):    self._print(msg, style="body")
-    def success(self, msg): self._print(msg, style="ok")
-    def warn(self, msg):    self._print(msg, style="warn")
-    def error(self, msg):   self._print(msg, style="err")
-    def dim(self, msg):     self._print(msg, style="dim")
 
     def renderable(self, msg, **kwargs):  self._rich.print(msg, **kwargs)
+
+    def partial(self, text: str) -> None:
+        width = self._rich.width
+        show = text if len(text) < width else "…" + text[-(width - 2):]
+        self._rich.file.write(f"\r\x1b[K{show}")
+        self._rich.file.flush()
+
+    def line(self, text: str) -> None:
+        self._rich.file.write("\r\x1b[K")
+        self._rich.print(Markdown(text, style="body"))
+
+    def raw_line(self, text: str) -> None:
+        self._rich.file.write("\r\x1b[K")
+        self._rich.print(text, style="body", markup=False, highlight=False)
+
+    def clear_lines(self, n: int) -> None:
+        for _ in range(n):
+            self._rich.file.write("\x1b[1A\x1b[K")
+        self._rich.file.flush()
 
     def tool_result(self, output, is_error: bool = False,
                      max_lines: int = 12, max_chars: int = 2000) -> None:
@@ -89,6 +107,12 @@ class Console:
         for line in lines:
             self._print(f"    {line}", style=style)
 
+    # semantics
+    def info(self, msg):    self._print(msg, style="body")
+    def success(self, msg): self._print(msg, style="ok")
+    def warn(self, msg):    self._print(msg, style="warn")
+    def error(self, msg):   self._print(msg, style="err")
+    def dim(self, msg):     self._print(msg, style="dim")
 console = Console()
 
 class Settings:
@@ -353,12 +377,38 @@ class Assistant:
                             tools=_tools.tools(),
                             messages=messages.messages
                         ) as stream:
+                            buf = ""
+                            code_lines = None
                             for text in stream.text_stream:
                                 parts.append(text)
+                                buf += text
+                                while "\n" in buf:
+                                    line, _, buf = buf.partition("\n")
+                                    fence = line.strip().startswith("```")
+                                    if code_lines is None:
+                                        if fence:
+                                            code_lines = [line]
+                                            console.raw_line(line)
+                                        else:
+                                            console.line(line)
+                                    else:
+                                        code_lines.append(line)
+                                        console.raw_line(line)
+                                        if fence:
+                                            console.clear_lines(len(code_lines))
+                                            console.renderable(Markdown("\n".join(code_lines), style="body"))
+                                            code_lines = None
+                                console.partial(buf)
+                            if code_lines is not None:
+                                code_lines.append(buf)
+                                console.raw_line(buf)
+                                console.clear_lines(len(code_lines))
+                                console.renderable(Markdown("\n".join(code_lines), style="body"))
+                            elif buf:
+                                console.line(buf)
+                            else:
+                                print()
                             final = stream.get_final_message()
-
-                        if parts:
-                            console.renderable(Markdown("".join(parts), style="body"))
                     except KeyboardInterrupt:
                         pass
 
@@ -430,7 +480,7 @@ class Assistant:
                         except Exception as e:
                             output, is_error = f"{type(e).__name__}: {e}", True
 
-                        if block.name != "read_file":
+                        if block.name not in SILENT: # Ignore large dumps from readfile / reprinting ask_user_question
                             console.tool_result(output, is_error)
 
                         results.append({
