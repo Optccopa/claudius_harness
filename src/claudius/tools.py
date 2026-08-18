@@ -5,8 +5,9 @@ import re
 from pathlib import Path
 
 import questionary as qt
-from rich.console import Console
 from rich.theme import Theme
+
+from claudius.console import Console
 
 theme = Theme({
     "body":   "#e8e3d8",
@@ -18,7 +19,7 @@ theme = Theme({
     "err":    "#d9605a",
 })
 
-console = Console(theme=theme, highlight=False)
+console = Console()
 
 tools = [
     {
@@ -350,10 +351,10 @@ def _raise_for_permission(label: str, mode: str):
         return
 
     else:
-        ok = qt.confirm(
+        ok = console.confirm(
             f"Claude wants to run `{label}`",
             default=True,
-        ).ask()
+        )
         if not ok:
             raise RejectedToolUse(f"Your tool use was rejected, {label}")
 
@@ -379,7 +380,7 @@ def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
                 for n, line in enumerate(old_lines[i1:i2], i1 + 1):
                     console.print(f"  [dim]{n:>4}   {line}[/]")
                     shown += 1
-    console.print()
+    console._print("")
 
 def ask_user_question(question: str, choices: list, max_answers: int = 1, **kwargs):
     choices = list(choices) + ["Other"]
@@ -393,7 +394,7 @@ def ask_user_question(question: str, choices: list, max_answers: int = 1, **kwar
         return "User provided an empty answer."
 
     if response[0] == "Other":
-        return qt.text("What else?").ask()
+        return console.input("What else?")
     else:
         return response
 
