@@ -3,6 +3,7 @@ import datetime
 import inspect
 import json
 import argparse
+import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -11,7 +12,7 @@ from claudius import tools
 import anthropic
 import httpx
 import questionary as qt
-from rich.console import Console
+from rich.console import Console as RichConsole
 from rich.markdown import Markdown
 from rich.theme import Theme
 
@@ -22,7 +23,7 @@ stats = {
     "session_output_tokens": 0
 }
 
-theme = Theme({
+colors = {
     "body":   "#e8e3d8",
     "accent": "#D97757",
     "dim":    "#8a8175",
@@ -32,12 +33,44 @@ theme = Theme({
     "err":    "#d9605a",
 
     "markdown.code": "#D97757"
-})
-
-console = Console(theme=theme, highlight=False, width=200)
+}
 
 session = httpx.Client()
 
+class Console:
+    def __init__(self):
+        self._rich = RichConsole(
+            theme=Theme(colors),
+            highlight=False,
+            width=min(shutil.get_terminal_size((80, 24)).columns, 100)
+        )
+
+    def _print(self, *values, sep: str = " ", end: str = "\n", style: str = "body") -> None:
+        self._rich.print(*values, sep=sep, end=end, style=style)
+
+    def input(self, prompt: str = "you:") -> str | None:
+        try:
+            return qt.text(prompt).unsafe_ask().strip()
+        except (KeyboardInterrupt, EOFError):
+            return None
+
+    def select(self, prompt: str, choices: list):
+        try:
+            return qt.select(prompt, choices=choices).unsafe_ask()
+        except (KeyboardInterrupt, EOFError):
+            return None
+
+    # semantics
+    def info(self, msg):    self._print(msg, style="body")
+    def success(self, msg): self._print(msg, style="ok")
+    def warn(self, msg):    self._print(msg, style="warn")
+    def error(self, msg):   self._print(msg, style="err")
+    def dim(self, msg):     self._print(msg, style="dim")
+
+    def renderable(self, msg, **kwargs):  self._rich.print(msg, **kwargs)
+
+console = Console()
+    
 class Settings:
     def __init__(self):
         self.base_dir = Path(__file__).resolve().parent.parent.parent
@@ -131,7 +164,7 @@ class Client:
             
             if not self._openrouter:
                 self._openrouter = anthropic.Anthropic(api_key=settings.openrouter_api_key, base_url="https://openrouter.ai/api")
-                console.print(f"[dim]Loaded {settings.model}[/]")
+                console.dim(f"Loaded {settings.model}")
                 
             return self._openrouter
 
@@ -142,15 +175,19 @@ client = Client()
 
 class CommandHandler:
     def _model(self):
-        console.print(f"[ok]Current model: {settings.model}[/]")
+        console.dim(f"Current model: {settings.model}")
         try:
             r = session.get(
                 "https://openrouter.ai/api/v1/models",
-                params={"sort": "intelligence-high-to-low"}
+                params={
+                    "sort": "intelligence-high-to-low",
+                    "min_tool_success_rate": "0.01",
+                    "supported_parameters": "tools"
+                }
             )
             r.raise_for_status()
         except httpx.HTTPError as e:
-            console.print(f"[err]Failed fetching openrouter models: {e}[/]")
+            console.error(f"Failed fetching openrouter models: {e}")
             return
 
         free, paid = [], []
@@ -159,45 +196,47 @@ class CommandHandler:
                 continue
             p = m.get("pricing", {})
             is_free = not any(float(p.get(k) or 0) for k in ("prompt", "completion", "request"))
+            if "claude" in m["id"]:
+                continue # Claude models already listed on anthropic endpoint
             (free if is_free else paid).append(m["id"])
 
         choices = [
             qt.Separator("---Anthropic---"),
-            *[qt.Choice(title=m.display_name, value=m.id) for m in client.client("anthropic").models.list()],
+            *[qt.Choice(title=m.display_name, value=m.id) for m in client.client("anthropic").models.list()][:5],
             qt.Separator("---Paid---"),
             *[qt.Choice(title=m, value=m) for m in paid[:5]],
             qt.Separator("---Free---"),
             *[qt.Choice(title=m, value=m) for m in free[:5]],
         ]
 
-        settings.model = qt.select("Select a model", choices=choices).ask()
+        settings.model = console.select("Select a model", choices=choices)
 
     def _mode(self, args: str | None):
         if args:
             settings.mode = args or "manual"
-            console.print(f"[ok]Changed mode to {settings.mode}[/]")
+            console.success(f"Changed mode to {settings.mode}")
         else:
-            console.print(f"[body]Current mode: {settings.mode} (available: 'manual', 'auto')[/]")
+            console.info(f"Current mode: {settings.mode} (available: 'manual', 'auto')")
 
     def _tools(self):
         tools = _tools.tools()
 
         if not tools:
-            console.print("[dim]No tools registered[/]")
+            console.dim("No tools registered")
             return
 
         width = max(len(t["name"]) for t in tools)
         for t in tools:
             desc = t.get("description") or "Description not found"
-            console.print(f"  [body]{t['name']:<{width}}[/]  [dim]{desc}[/]")
+            console.info(f"  {t['name']:<{width}}  [dim]{desc}")
 
     def _save(self, args: str | None):
         messages.save(f"{settings.chats_dir}/chat-{args}.json")
-        console.print("[ok]Saved messages[/]")
+        console.success("Saved messages")
 
     def _load(self, args: str | None):
         messages.load(f"{settings.chats_dir}/chat-{args}.json")
-        console.print("[ok]Loaded messages[/]")
+        console.success("Loaded messages")
     
     def parse(self, user_input: str = "/") -> bool:
         cmd, _, args = user_input.removeprefix("/").partition(" ")
@@ -220,7 +259,7 @@ class CommandHandler:
             self._mode(args=args)
 
         else:
-            console.print(f"[err]Command not found: {cmd}[/]")
+            console.error(f"Command not found: {cmd}")
 
 class Assistant:
     def __init__(self):
@@ -232,7 +271,7 @@ class Assistant:
                 if first:
                     user_input, first = first, None
                 else:
-                    user_input = str(qt.text("you:").ask()).strip()
+                    user_input = console.input() # Default 'you:' 
 
                 if user_input.startswith("/"):
                     self.handler.parse(user_input)
@@ -261,13 +300,12 @@ class Assistant:
                             final = stream.get_final_message()
 
                         if parts:
-                            console.print(Markdown("".join(parts), style="body"))
+                            console.renderable(Markdown("".join(parts), style="body"))
                     except KeyboardInterrupt:
                         pass
 
-                    print()
                     if final.stop_reason == "max_tokens":
-                        console.print("[warn]    hit max_tokens, reply truncated[/]")
+                        console.warn("    hit max_tokens, reply truncated")
 
                     if final is None:
                         partial = "".join(parts).strip()
@@ -278,7 +316,7 @@ class Assistant:
                             })
                         else:
                             del messages.messages[snapshot:]
-                        console.print("[dim] interrupted[/]")
+                        console.dim(" interrupted")
                         break
 
                     messages.messages.append({"role": "assistant", "content": final.content})
@@ -288,12 +326,12 @@ class Assistant:
 
                         if t == "server_tool_use":
                             if block.name == "web_search":
-                                console.print(f"[dim]  ▪ search  {block.input.get('query','')}[/]")
+                                console.dim(f"  ▪ search  {block.input.get('query','')}")
                             continue
 
                         if t == "web_search_tool_result":
                             n = len(block.content) if isinstance(block.content, list) else 0
-                            console.print(f"[dim]    ↳ {n} results[/]")
+                            console.dim(f"    ↳ {n} results")
                             continue
 
                     if final.stop_reason != "tool_use":
@@ -321,14 +359,14 @@ class Assistant:
 
                         args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
                         suffix = f"with {args[:80]}" if block.input else ""
-                        console.print(f"[dim]  ▪ {block.name}  {suffix}[/]")
+                        console.dim(f"  ▪ {block.name} {suffix}")
 
                         try:
                             output = _tools.named_tool_functions[block.name](**block.input, mode=settings.mode)
                             is_error = False
                         except KeyboardInterrupt:
                             output, is_error, aborted = "Interrupted by user.", True, True
-                            console.print("\n[err]    \\ tool use interrupted[/]")
+                            console.error("\n    \\ tool use interrupted")
                         except TypeError as e:
                             output = f"{e}. Check the tool's input_schema for exact parameter names."
                             is_error = True
@@ -350,20 +388,20 @@ class Assistant:
                 print()
 
             except anthropic.APIConnectionError as e:
-                console.print(f"[err]{e.message}[/]")
+                console.error(e.message)
                 del messages.messages[snapshot:]
 
             except anthropic.RateLimitError as e:
-                console.print(f"[err]{e.message}[/]")
+                console.error(e.message)
                 del messages.messages[snapshot:]
             
             except anthropic.APIStatusError as e:
-                console.print(f"[err]{e.body["error"]["message"]}[/]")
+                console.error(e.body["error"]["message"])
                 del messages.messages[snapshot:]
                 continue
 
             except ValueError as e:
-                console.print(f"[err]{e}[/]")
+                console.error(e)
                 del messages.messages[snapshot:]
                 continue
 
@@ -377,7 +415,7 @@ class Assistant:
                     stats['session_input_tokens'] * 2
                     + stats['session_output_tokens'] * 10) / 1_000_000
 
-                console.print(f"[dim]{settings.model} · {settings.mode} · session: ${cost:.3f} ($2, $10)[/]")
+                console.dim(f"{settings.model} · {settings.mode} · session: ${cost:.3f} ($2, $10)")
 
 def main():
     parser = argparse.ArgumentParser(
