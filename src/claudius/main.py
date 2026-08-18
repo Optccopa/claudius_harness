@@ -4,6 +4,7 @@ import inspect
 import json
 import argparse
 import shutil
+from platformdirs import user_data_dir
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -93,7 +94,24 @@ class Settings:
     def __init__(self):
         self.base_dir = Path(__file__).resolve().parent.parent.parent
 
-        load_dotenv(self.base_dir / ".env")
+        self.claudius_dir = Path(user_data_dir(".claudius", appauthor=False))
+
+        self.claudius_dir.mkdir(exist_ok=True, parents=True)
+
+        self.env_file = self.claudius_dir / ".env"
+
+        if not self.env_file.exists():
+            example = self.base_dir / "example.env"
+            self.env_file.write_text(
+                example.read_text(encoding="utf-8") if example.exists()
+                else "ANTHROPIC_API_KEY=\nOPENROUTER_API_KEY=\nMODEL=claude-sonnet-5\n",
+                encoding="utf-8",
+            )
+            raise SystemExit(
+                f"{self.env_file} must have either OPENROUTER_API_KEY or ANTHROPIC_API_KEY defined"
+            )
+
+        load_dotenv(self.env_file)
 
         self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
@@ -104,8 +122,9 @@ class Settings:
         
         self.system_file = self.base_dir / "SYSTEM.md"
 
-        self.chats_dir = self.base_dir / "chats"
-        self.chats_dir.mkdir(exist_ok=True)
+        self.chats_dir = self.claudius_dir / "chats"
+
+        self.chats_dir.mkdir(exist_ok=True, parents=True)
 
 
 settings = Settings()
@@ -144,6 +163,17 @@ class Messages:
         tmp.write_text(json.dumps(out, indent=2, ensure_ascii=False), encoding="utf-8")
         tmp.replace(path)
 
+    def save_exc(self, exc: str, snapshot: int):
+        """Saves and deletes current context"""
+        now = datetime.datetime.now()
+        path = Path(f"{settings.chats_dir}/chat-{exc}-{now.strftime("%H-%M-%S")}.json")
+
+        self.save(path)
+
+        del messages.messages[snapshot:]
+
+        console.success(f"Saved messages as {path.absolute()}")
+
     def load(self, path: Path):
         self.messages = json.loads(Path(path).read_text())
 
@@ -181,7 +211,12 @@ class Client:
                 raise ValueError("Failed loading openrouter api key, set OPENROUTER_API_KEY in .env")
             
             if not self._openrouter:
-                self._openrouter = anthropic.Anthropic(api_key=settings.openrouter_api_key, base_url="https://openrouter.ai/api")
+                self._openrouter = anthropic.Anthropic(
+                    api_key=settings.openrouter_api_key,
+                    base_url="https://openrouter.ai/api",
+                    max_retries=0
+                )
+
                 console.dim(f"Loaded {settings.model}")
                 
             return self._openrouter
@@ -409,20 +444,20 @@ class Assistant:
 
             except anthropic.APIConnectionError as e:
                 console.error(e.message)
-                del messages.messages[snapshot:]
+                messages.save_exc(type(e).__name__, snapshot)
 
             except anthropic.RateLimitError as e:
                 console.error(e.message)
-                del messages.messages[snapshot:]
+                messages.save_exc(type(e).__name__, snapshot)
             
             except anthropic.APIStatusError as e:
                 console.error(e.body["error"]["message"])
-                del messages.messages[snapshot:]
+                messages.save_exc(type(e).__name__, snapshot)
                 continue
 
             except ValueError as e:
                 console.error(e)
-                del messages.messages[snapshot:]
+                messages.save_exc(type(e).__name__, snapshot)
                 continue
 
             if final:
