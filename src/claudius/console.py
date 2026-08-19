@@ -2,6 +2,7 @@ import shutil
 
 import questionary as qt
 from rich.console import Console as RichConsole
+from rich.markup import RE_TAGS
 from rich.theme import Theme
 from rich.markdown import Markdown
 
@@ -70,7 +71,7 @@ class Console:
 
     def tool_result(self, output, is_error: bool = False,
                      max_lines: int = 12, max_chars: int = 2000) -> None:
-        text = str(output).strip()
+        text = RE_TAGS.sub("", (str(output)).strip())
         if not text:
             return
 

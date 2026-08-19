@@ -1,6 +1,6 @@
 # Claudius Harness
 
-A model harness like claudecode or codex built in python, supports Anthropic natively and a large amount of models via OpenRouter and Ollama
+A model harness like Claude Code or Codex built in python, supports Anthropic natively and a large amount of models via OpenRouter and Ollama
 
 ![Claude](https://img.shields.io/badge/Supports_Claude-D97757?logo=claude&logoColor=white)
 ![OpenRouter](https://img.shields.io/badge/Supports_OpenRouter-6467F2?logo=openrouter&logoColor=white)

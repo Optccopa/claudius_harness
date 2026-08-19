@@ -7,12 +7,16 @@ from claudius.tools import tools
 
 from claudius.settings import settings
 from claudius.console import console
-from claudius.client import client
+from claudius.clients import client
 from claudius.messages import messages
 
 class CommandHandler:
-    def _model(self):
+    def _model(self, args: str):
         console.dim(f"Current model: {settings.model}")
+
+        if args:
+            settings.model = args.strip()
+            console.success(f"Changed model to {args.strip()}")
 
         try:
             r = httpx.get(
@@ -64,7 +68,11 @@ class CommandHandler:
             *[qt.Choice(title=m, value=m) for m in ollama[:5]],
         ]
 
-        settings.model = console.select("Select a model", choices=choices)
+        model = console.select("Select a model", choices=choices)
+
+        if model:
+            settings.model = model
+            console.success(f"Changed model to {model}")
 
     def _mode(self, args: str | None):
         if args:
@@ -97,7 +105,7 @@ class CommandHandler:
         args = args.strip()
 
         if cmd == "model":
-            return self._model()
+            return self._model(args=args)
 
         elif cmd == "tools":
             self._tools()

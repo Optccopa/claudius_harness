@@ -5,12 +5,15 @@ import inspect
 
 import anthropic
 from rich.markdown import Markdown
+from rich.markup import RE_TAGS
 
 from claudius import tools
 
 from claudius.console import console
 from claudius.settings import settings
-from claudius.client import client
+
+from claudius.clients import client
+
 from claudius.messages import messages
 from claudius.commands import handler
 
@@ -153,7 +156,7 @@ def chat(first: str | None = None):
 
                     args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
                     suffix = f"with {args}" if block.input else ""
-                    console.dim(f"  ▪ {block.name} {suffix}")
+                    console.dim(RE_TAGS.sub("", f"  ▪ {block.name} {suffix}"))
 
                     try:
                         output = named_tool_functions[block.name](**block.input, mode=settings.mode)
