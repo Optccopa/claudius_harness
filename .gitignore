@@ -1,8 +1,13 @@
+# linters
+.ruff_cache/
+.mypy_cache/
+
+# python
 __pycache__/
-.env
 tempCodeRunnerFile.py
-chats/
-port.py
 *.egg-info/
 build/
 dist/
+
+# secrets
+.env
