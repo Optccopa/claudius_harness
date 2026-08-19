@@ -17,7 +17,7 @@ class Client:
             if not self._ollama:
                 self._ollama = anthropic.Anthropic(
                     api_key="ollama",
-                    base_url="http://localhost:11434",
+                    base_url=settings.ollama_base_url,
                     max_retries=0
                 )
 
@@ -41,7 +41,7 @@ class Client:
             if not self._openrouter:
                 self._openrouter = anthropic.Anthropic(
                     api_key=settings.openrouter_api_key,
-                    base_url="https://openrouter.ai/api",
+                    base_url=settings.openrouter_base_url,
                     max_retries=0
                 )
 

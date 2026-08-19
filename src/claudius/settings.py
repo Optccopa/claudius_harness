@@ -31,6 +31,9 @@ class Settings:
 
         self.chats_dir.mkdir(exist_ok=True, parents=True)
 
+        self.ollama_base_url = "http://localhost:11434"
+        self.openrouter_base_url = "https://openrouter.ai/api"
+
     def _raise_for_env_file(self):
         if not self.env_file.exists():
             example = self.base_dir / "example.env"
