@@ -42,7 +42,7 @@ class Settings:
                 else "ANTHROPIC_API_KEY=\nOPENROUTER_API_KEY=\nMODEL=claude-sonnet-5\n",
                 encoding="utf-8",
             )
-            raise SystemExit(
+            print(
                 f"{self.env_file} must have either OPENROUTER_API_KEY or ANTHROPIC_API_KEY defined"
             )
 
