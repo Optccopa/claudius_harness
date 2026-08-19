@@ -4,7 +4,7 @@ A model harness like claudecode or codex built in python, supports Anthropic nat
 
 ![Claude](https://img.shields.io/badge/Supports_Claude-D97757?logo=claude&logoColor=white)
 ![OpenRouter](https://img.shields.io/badge/Supports_OpenRouter-6467F2?logo=openrouter&logoColor=white)
-![Ollama](https://img.shields.io/badge/Supports_Ollama-000000?logo=ollama&logoColor=white)
+![Ollama](https://img.shields.io/badge/Supports_Ollama-000000?logo=ollama&logoColor=black&color=white)
 
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?Color=3776AB&labelColor=FFD43B)
 
