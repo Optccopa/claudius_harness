@@ -6,6 +6,8 @@ from pathlib import Path
 from claudius.settings import settings
 from claudius.console import console
 
+warned = False
+
 def _prompt_for_permission():
     if console.confirm(
         "Do you trust this project and want to adopt its CLAUDE.md file into your system prompt"
@@ -23,7 +25,9 @@ def _claude_md() -> str:
 
         return f"## Project claude.md\n{claude_md}"
     else:
-        console.error(f"Could not find CLAUDE.md at {settings.claude_file}")
+        if warned == False:
+            console.error(f"Could not find CLAUDE.md at {settings.claude_file}")
+            warned = True
         return ""
 
 class Messages:
@@ -55,7 +59,7 @@ class Messages:
             else: # denied on first run
                 system = system.replace("{{claude_md}}", "")
 
-        elif trusted == True: # prompted and said yes
+        elif trusted is True: # prompted and said yes
             system = system.replace("{{claude_md}}", _claude_md())
 
         else: # prompted and said no / other
