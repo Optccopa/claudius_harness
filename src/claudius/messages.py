@@ -50,7 +50,7 @@ class Messages:
 
         del self.messages[snapshot:]
 
-        console.success(f"Saved messages as {path.absolute()}")
+        console.success(f"Saved messages as {path.resolve()}")
 
     def load(self, path: Path):
         self.messages = json.loads(Path(path).read_text(encoding="utf-8"))

@@ -32,9 +32,9 @@ class Ollama(anthropic.Anthropic):
 
 class LazyClient:
     def __init__(self):
-        self._anthropic = None
-        self._openrouter = None
-        self._ollama = None
+        self._anthropic: Anthropic | None = None
+        self._openrouter: OpenRouter | None = None
+        self._ollama: Ollama | None = None
 
     def client(self, source: str | None = None):
         if source == "ollama" or source is None and ":" in settings.model and "/" not in settings.model:

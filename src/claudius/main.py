@@ -19,7 +19,9 @@ from claudius.commands import handler
 
 SILENT = [
     "read_file",
-    "ask_user_question"
+    "ask_user_question",
+    "git_diff",
+    "tree"
 ]
 
 stats = {
@@ -32,6 +34,43 @@ named_tool_functions = {
     for name, fn in inspect.getmembers(tools, inspect.isfunction)
     if fn.__module__ == tools.__name__ and not name.startswith("_")
 }
+
+def stream_response(stream, parts: list):
+    buf = ""
+    code_lines = None
+    for text in stream.text_stream:
+        parts.append(text)
+        buf += text
+        while "\n" in buf:
+            line, _, buf = buf.partition("\n")
+            fence = line.strip().startswith("```")
+            if code_lines is None:
+                if fence:
+                    code_lines = [line]
+                    console.raw_line(line)
+                else:
+                    console.line(line)
+            else:
+                code_lines.append(line)
+                console.raw_line(line)
+                if fence:
+                    console.clear_lines(len(code_lines))
+                    console.renderable(Markdown("\n".join(code_lines), style="body"))
+                    code_lines = None
+
+        console.partial(buf)
+
+    if code_lines is not None:
+        code_lines.append(buf)
+        console.raw_line(buf)
+        console.clear_lines(len(code_lines))
+        console.renderable(Markdown("\n".join(code_lines), style="body"))
+    elif buf:
+        console.line(buf)
+    else:
+        print()
+
+    return stream.get_final_message()
 
 def chat(first: str | None = None):
     while True:
@@ -66,38 +105,7 @@ def chat(first: str | None = None):
                         tools=tools.tools,
                         messages=messages.messages
                     ) as stream:
-                        buf = ""
-                        code_lines = None
-                        for text in stream.text_stream:
-                            parts.append(text)
-                            buf += text
-                            while "\n" in buf:
-                                line, _, buf = buf.partition("\n")
-                                fence = line.strip().startswith("```")
-                                if code_lines is None:
-                                    if fence:
-                                        code_lines = [line]
-                                        console.raw_line(line)
-                                    else:
-                                        console.line(line)
-                                else:
-                                    code_lines.append(line)
-                                    console.raw_line(line)
-                                    if fence:
-                                        console.clear_lines(len(code_lines))
-                                        console.renderable(Markdown("\n".join(code_lines), style="body"))
-                                        code_lines = None
-                            console.partial(buf)
-                        if code_lines is not None:
-                            code_lines.append(buf)
-                            console.raw_line(buf)
-                            console.clear_lines(len(code_lines))
-                            console.renderable(Markdown("\n".join(code_lines), style="body"))
-                        elif buf:
-                            console.line(buf)
-                        else:
-                            print()
-                        final = stream.get_final_message()
+                        final = stream_response(stream, parts)
                 except KeyboardInterrupt:
                     pass
 

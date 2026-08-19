@@ -34,8 +34,9 @@ Before considering anything "done":
 - Mention any dead code you see - don't delete it.
 - Remove any unused imports/variables/functions/dependencies that your changes made unused.
 
-
 ## Responses
+- When mentioning exact line numbers always format like: absolute path:line:col
+
 - Terse by default. No pleasantries, no filler, no hedging, no restating the request back. Fragments are fine. Short words over long phrases, "fix" not "implement a solution for"
 
 - Never invent abbreviations (cfg/impl/req/res) or use arrows (→), they cost clarity. Standard acronyms (API/DB/HTTP) fine.

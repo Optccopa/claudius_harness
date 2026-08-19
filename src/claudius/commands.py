@@ -28,7 +28,8 @@ class CommandHandler:
                 }
             )
 
-            free, paid = None, None
+            paid: list[str] | None = None
+            free: list[str] | None = None
 
             if r.status_code == 200:
                 free, paid = [], []
@@ -74,6 +75,11 @@ class CommandHandler:
             settings.model = model
             console.success(f"Changed model to {model}")
 
+            try:
+                settings.save_key(model=model)
+            except Exception as e:
+                console.error(f"Had an issue while trying to save the model to settings: {e}")
+
     def _mode(self, args: str | None):
         if args:
             settings.mode = args or "manual"
@@ -99,6 +105,12 @@ class CommandHandler:
         messages.load(Path(f"{settings.chats_dir}/chat-{args}.json"))
         console.success("Loaded messages")
 
+    def _env(self):
+        console.info(f".env file: {settings.env_file.resolve()}")
+
+    def _settings(self):
+        console.info(f"settings.json file: {settings.settings_file.resolve()}")
+
     def parse(self, user_input: str = "/") -> None:
         cmd, _, args = user_input.removeprefix("/").partition(" ")
         cmd = cmd.lower()
@@ -118,6 +130,12 @@ class CommandHandler:
 
         elif cmd == "mode":
             self._mode(args=args)
+
+        elif cmd == "env":
+            self._env()
+
+        elif cmd == "settings":
+            self._settings()
 
         else:
             console.error(f"Command not found: {cmd}")
