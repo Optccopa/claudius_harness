@@ -501,7 +501,8 @@ def tree(path: str = ".", prefix: str = "", **kwargs) -> str:
     out = []
     for i, e in enumerate(entries):
         last = i == len(entries) - 1
-        out.append(f"{prefix}{'\\ ' if last else '|- '}{e.name}")
+        branch = "\\ " if last else "|- "
+        out.append(f"{prefix}{branch}{e.name}")
         if e.is_dir():
             out.append(tree(e, prefix + ("    " if last else "|   ")))
     return "\n".join(filter(None, out))

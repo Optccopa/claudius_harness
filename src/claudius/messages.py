@@ -44,7 +44,7 @@ class Messages:
     def save_exc(self, exc: str, snapshot: int):
         """Saves and deletes current context"""
         now = datetime.datetime.now()
-        path = Path(f"{settings.chats_dir}/chat-{exc}-{now.strftime("%H-%M-%S")}.json")
+        path = Path(f"{settings.chats_dir}/chat-{exc}-{now.strftime('%H-%M-%S')}.json")
 
         self.save(path)
 

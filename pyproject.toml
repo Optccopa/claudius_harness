@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "claudius"
 version = "0.1.0"
 description = "Claudius cli assistant"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "anthropic",
     "rich",
@@ -21,6 +21,3 @@ claudius = "claudius.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
