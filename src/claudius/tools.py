@@ -267,7 +267,7 @@ tools = [
                 },
                 "timeout": {
                     "type": "integer",
-                    "description": "Seconds before the command is killed. default: 120.",
+                    "description": "Seconds before the command is killed. default: 60.",
                     "minimum": 1,
                     "maximum": 600,
                 },

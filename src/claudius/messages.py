@@ -48,7 +48,7 @@ class Messages:
 
         self.save(path)
 
-        del messages.messages[snapshot:]
+        del self.messages[snapshot:]
 
         console.success(f"Saved messages as {path.absolute()}")
 
