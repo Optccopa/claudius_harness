@@ -18,3 +18,7 @@ pip install -e .
 
 claudius "hello" # Prompts to fill in api secrets on first run
 ```
+
+## License
+
+Apache License 2.0, see [LICENSE](LICENSE).
