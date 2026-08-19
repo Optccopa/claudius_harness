@@ -7,7 +7,14 @@ name = "claudius"
 version = "0.1.0"
 description = "Claudius cli assistant"
 requires-python = ">=3.13"
-dynamic = ["dependencies"]
+dependencies = [
+    "anthropic",
+    "rich",
+    "httpx",
+    "python-dotenv",
+    "questionary",
+    "platformdirs"
+]
 
 [project.scripts]
 claudius = "claudius.cli:main"
