@@ -44,7 +44,7 @@ class Console:
         try:
             return qt.confirm(prompt, default=default).unsafe_ask()
         except (KeyboardInterrupt, EOFError):
-            return None
+            return False
 
     def renderable(self, msg, **kwargs):
         self._rich.print(msg, **kwargs)

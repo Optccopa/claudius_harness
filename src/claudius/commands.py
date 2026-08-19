@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import httpx
 import questionary as qt
 
@@ -82,14 +84,14 @@ class CommandHandler:
             console.info(f"  {t['name']:<{width}}  [dim]{desc}")
 
     def _save(self, args: str | None):
-        messages.save(f"{settings.chats_dir}/chat-{args}.json")
+        messages.save(Path(f"{settings.chats_dir}/chat-{args}.json"))
         console.success("Saved messages")
 
     def _load(self, args: str | None):
-        messages.load(f"{settings.chats_dir}/chat-{args}.json")
+        messages.load(Path(f"{settings.chats_dir}/chat-{args}.json"))
         console.success("Loaded messages")
 
-    def parse(self, user_input: str = "/") -> bool:
+    def parse(self, user_input: str = "/") -> None:
         cmd, _, args = user_input.removeprefix("/").partition(" ")
         cmd = cmd.lower()
         args = args.strip()

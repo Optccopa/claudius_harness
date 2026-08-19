@@ -399,7 +399,7 @@ def ask_user_question(question: str, choices: list, max_answers: int = 1, **kwar
         return response
 
 def powershell(command: str, timeout: int = 60, **kwargs) -> str:
-    _raise_for_permission(command, kwargs.get("mode"))
+    _raise_for_permission(command, str(kwargs.get("mode")))
     try:
         r = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", command],
@@ -472,7 +472,7 @@ def edit_file(path: str, old_string: str = "", new_string: str = "",
     updated = text.replace(old_string, new_string)
 
     _show_diff(text, updated)
-    _raise_for_permission(f"edit {p.name}", kwargs.get("mode"))
+    _raise_for_permission(f"edit {p.name}", str(kwargs.get("mode")))
 
     p.write_text(updated, encoding="utf-8")
     return f"Edited {path} ({count} replacement{'s' if count != 1 else ''})"
@@ -482,7 +482,7 @@ def create_file(path: str | Path, content: str | None = None, **kwargs):
     if path.exists():
         return f"{path.resolve()} already exists. Use edit_file to modify it."
 
-    _raise_for_permission(f"create_file {path}", mode=kwargs.get("mode"))
+    _raise_for_permission(f"create_file {path}", str(kwargs.get("mode")))
 
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -495,7 +495,7 @@ def create_file(path: str | Path, content: str | None = None, **kwargs):
 
     return (f"Created file at {path.resolve()}")
 
-def tree(path: str = ".", prefix: str = "", **kwargs) -> str:
+def tree(path: Path = Path("."), prefix: str = "", **kwargs) -> str:
     entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
     entries = [e for e in entries if not e.name.startswith(".")]
     out = []
