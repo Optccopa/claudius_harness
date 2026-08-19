@@ -1,0 +1,1 @@
+Claudius is a model harness like Claude Code or Codex built in python, supports Anthropic natively and a large amount of models via OpenRouter and Ollama

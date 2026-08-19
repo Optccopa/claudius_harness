@@ -11,6 +11,8 @@ class Settings:
 
         self.claudius_dir = Path(user_data_dir(".claudius", appauthor=False))
 
+        self.cwd = Path().resolve()
+
         self.claudius_dir.mkdir(exist_ok=True, parents=True)
 
         self.settings_file = self.claudius_dir / "settings.json"
@@ -20,6 +22,13 @@ class Settings:
         self._print_for_env_file()
 
         load_dotenv(self.env_file)
+
+        self.claude_file = self.cwd / "CLAUDE.md"
+
+        # most recently sent filled sys prompt
+        self.debug_dir = self.claudius_dir / "debug"
+        self.debug_dir.mkdir(parents=True, exist_ok=True)
+        self.debug_system_file = self.debug_dir / "sysprompt.md"
 
         self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")

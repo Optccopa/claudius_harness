@@ -65,3 +65,5 @@ compress away nuance to save tokens.
 - Don't delete files you did not create.
 - Never install packages, change versions, or modify global configuration without being asked directly or asking the user
 - NEVER run destructive git commands
+
+{{claude_md}}
