@@ -366,19 +366,19 @@ def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
     for group in difflib.SequenceMatcher(None, old_lines, new_lines).get_grouped_opcodes(3):
         for tag, i1, i2, j1, j2 in group:
             if shown >= max_lines:
-                console.print("  [dim]…[/]")
+                console.dim("  …")
                 return
             if tag in ("replace", "delete"):
                 for n, line in enumerate(old_lines[i1:i2], i1 + 1):
-                    console.print(f"  [dim]{n:>4}[/] [err]- {line}[/]")
+                    console.dim(f"  {n:>4}[/] [err]- {line}")
                     shown += 1
             if tag in ("replace", "insert"):
                 for n, line in enumerate(new_lines[j1:j2], j1 + 1):
-                    console.print(f"  [dim]{n:>4}[/] [ok]+ {line}[/]")
+                    console.dim(f"  {n:>4}[/] [ok]+ {line}")
                     shown += 1
             if tag == "equal":
                 for n, line in enumerate(old_lines[i1:i2], i1 + 1):
-                    console.print(f"  [dim]{n:>4}   {line}[/]")
+                    console.dim(f"  {n:>4}   {line}")
                     shown += 1
     console._print("")
 
