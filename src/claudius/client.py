@@ -7,9 +7,25 @@ class Client:
     def __init__(self):
         self._anthropic = None
         self._openrouter = None
+        self._ollama = None
 
     def client(self, source: str | None = None):
-        if source == "anthropic" or "/" not in settings.model:
+
+        if source == "ollama" or (
+            source is None and ":" in settings.model and "/" not in settings.model
+        ):
+            if not self._ollama:
+                self._ollama = anthropic.Anthropic(
+                    api_key="ollama",
+                    base_url="http://localhost:11434",
+                    max_retries=0
+                )
+
+                console.dim(f"Loaded {settings.model}")
+
+            return self._ollama
+
+        elif source == "anthropic" or "/" not in settings.model:
             if not settings.anthropic_api_key:
                 raise ValueError("Failed loading anthropic api key, set ANTHROPIC_API_KEY in .env")
 
