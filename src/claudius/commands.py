@@ -11,29 +11,45 @@ from claudius.messages import messages
 class CommandHandler:
     def _model(self):
         console.dim(f"Current model: {settings.model}")
+
         try:
             r = httpx.get(
-                "https://openrouter.ai/api/v1/models",
+                f"{settings.openrouter_base_url}/v1/models",
                 params={
                     "sort": "intelligence-high-to-low",
                     "min_tool_success_rate": "0.01",
                     "supported_parameters": "tools"
                 }
             )
-            r.raise_for_status()
-        except httpx.HTTPError as e:
-            console.error(f"Failed fetching openrouter models: {e}")
-            return
 
-        free, paid = [], []
-        for m in r.json()["data"]:
-            if m["id"].endswith(":batch"):
-                continue
-            p = m.get("pricing", {})
-            is_free = not any(float(p.get(k) or 0) for k in ("prompt", "completion", "request"))
-            if "claude" in m["id"]:
-                continue # Claude models already listed on anthropic endpoint
-            (free if is_free else paid).append(m["id"])
+            free, paid = None, None
+
+            if r.status_code == 200:
+                free, paid = [], []
+                for m in r.json()["data"]:
+                    if m["id"].endswith(":batch"):
+                        continue
+
+                    p = m.get("pricing", {})
+                    is_free = not any(float(p.get(k) or 0) for k in ("prompt", "completion", "request"))
+                    if "claude" in m["id"]:
+                        continue # Claude models already listed on anthropic endpoint
+
+                    (free if is_free else paid).append(m["id"])
+        except httpx.HTTPError as e:
+            console.error(f"Failed fetching OpenRouter models {e}")
+
+        try:
+            r = httpx.get(
+                f"{settings.ollama_base_url}/api/tags"
+            )
+            if r.status_code == 200:
+                ollama = [
+                    m["name"] for m in r.json()["models"]
+                    if "tools" in m["capabilities"]
+                ]
+        except httpx.HTTPError as e:
+            console.error(f"Failed fetching Ollama models {e}")
 
         choices = [
             qt.Separator("---Anthropic---"),
@@ -42,6 +58,8 @@ class CommandHandler:
             *[qt.Choice(title=m, value=m) for m in paid[:5]],
             qt.Separator("---Free---"),
             *[qt.Choice(title=m, value=m) for m in free[:5]],
+            qt.Separator("---Ollama---"),
+            *[qt.Choice(title=m, value=m) for m in ollama[:5]],
         ]
 
         settings.model = console.select("Select a model", choices=choices)
