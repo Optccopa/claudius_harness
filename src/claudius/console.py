@@ -40,7 +40,7 @@ class Console:
         except (KeyboardInterrupt, EOFError):
             return None
 
-    def confirm(prompt: str, default: bool = True) -> bool:
+    def confirm(self, prompt: str, default: bool = True) -> bool:
         try:
             return qt.confirm(prompt, default=default).unsafe_ask()
         except (KeyboardInterrupt, EOFError):

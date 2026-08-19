@@ -53,6 +53,6 @@ class Messages:
         console.success(f"Saved messages as {path.absolute()}")
 
     def load(self, path: Path):
-        self.messages = json.loads(Path(path).read_text())
+        self.messages = json.loads(Path(path).read_text(encoding="utf-8"))
 
 messages = Messages()
