@@ -5,7 +5,6 @@ import subprocess
 import questionary as qt
 from rich.console import Console as RichConsole
 from rich.markdown import Markdown
-from rich.markup import RE_TAGS
 from rich.theme import Theme
 
 COLORS = {
@@ -28,8 +27,10 @@ class Console:
             width=min(shutil.get_terminal_size((80, 24)).columns, 100),
         )
 
-    def _print(self, *values, sep: str = " ", end: str = "\n", style: str = "body") -> None:
-        self._rich.print(*values, sep=sep, end=end, style=style)
+    def _print(
+        self, *values, sep: str = " ", end: str = "\n", style: str = "body", markup: bool = False
+    ) -> None:
+        self._rich.print(*values, sep=sep, end=end, style=style, markup=markup)
 
     def input(self, prompt: str = "you:") -> str | None:
         try:
@@ -74,7 +75,7 @@ class Console:
     def tool_result(
         self, output, is_error: bool = False, max_lines: int = 12, max_chars: int = 2000
     ) -> None:
-        text = RE_TAGS.sub("", (str(output)).strip())
+        text = str(output).strip()
         if not text:
             return
 
@@ -93,9 +94,8 @@ class Console:
     def clear(self):
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
 
-    # semantics
-    def info(self, msg):
-        self._print(msg, style="body")
+    def info(self, msg, markup: bool = False):
+        self._print(msg, style="body", markup=markup)
 
     def success(self, msg):
         self._print(msg, style="ok")
@@ -106,8 +106,8 @@ class Console:
     def error(self, msg):
         self._print(msg, style="err")
 
-    def dim(self, msg):
-        self._print(msg, style="dim")
+    def dim(self, msg, markup: bool = False):
+        self._print(msg, style="dim", markup=markup)
 
 
 console = Console()

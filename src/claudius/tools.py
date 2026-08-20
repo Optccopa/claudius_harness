@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import questionary as qt
+from rich.markup import escape
 from rich.theme import Theme
 
 from claudius.console import Console
@@ -357,11 +358,11 @@ def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
                 return
             if tag in ("replace", "delete"):
                 for n, line in enumerate(old_lines[i1:i2], i1 + 1):
-                    console.dim(f"  {n:>4}[/] [err]- {line}")
+                    console.dim(f"  {n:>4} [err]- {escape(line)}", markup=True)
                     shown += 1
             if tag in ("replace", "insert"):
                 for n, line in enumerate(new_lines[j1:j2], j1 + 1):
-                    console.dim(f"  {n:>4}[/] [ok]+ {line}")
+                    console.dim(f"  {n:>4} [ok]+ {escape(line)}", markup=True)
                     shown += 1
             if tag == "equal":
                 for n, line in enumerate(old_lines[i1:i2], i1 + 1):

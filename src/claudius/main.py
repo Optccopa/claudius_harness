@@ -6,7 +6,6 @@ import inspect
 
 import anthropic
 from rich.markdown import Markdown
-from rich.markup import RE_TAGS
 
 from claudius import tools
 from claudius.clients import client
@@ -15,7 +14,8 @@ from claudius.console import console
 from claudius.messages import messages
 from claudius.settings import settings
 
-SILENT = ["read_file", "ask_user_question", "git_diff", "tree"]
+# If a tool is in this dict it doesnt print args to the tool
+SILENT = ["create_file", "read_file", "ask_user_question", "git_diff", "tree"]
 
 stats = {"session_input_tokens": 0, "session_output_tokens": 0}
 
@@ -161,7 +161,7 @@ def chat(first: str | None = None):
 
                     args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
                     suffix = f"with {args}" if block.input else ""
-                    console.dim(RE_TAGS.sub("", f"  ▪ {block.name} {suffix}"))
+                    console.dim(f"  ▪ {block.name} {suffix}")
 
                     try:
                         output = named_tool_functions[block.name](**block.input, mode=settings.mode)
@@ -196,21 +196,25 @@ def chat(first: str | None = None):
             print()
 
         except anthropic.APIConnectionError as e:
-            console.error(e.message)
+            console.error(
+                f"{type(e).__name__}: {e.message} {e.__cause__}",
+            )
             messages.save_exc(type(e).__name__, snapshot)
 
         except anthropic.RateLimitError as e:
-            console.error(e.message)
+            console.error(f"{type(e).__name__}: {e.message}")
             messages.save_exc(type(e).__name__, snapshot)
 
         except anthropic.APIStatusError as e:
             error = e.body.get("error") if isinstance(e.body, dict) else None
-            console.error(error.get("message") if isinstance(error, dict) else e.message)
+            console.error(
+                f"{type(e).__name__}: {error.get('message') if isinstance(error, dict) else e.message}"
+            )
             messages.save_exc(type(e).__name__, snapshot)
             continue
 
         except ValueError as e:
-            console.error(e)
+            console.error(f"{type(e).__name__}: {e}")
             messages.save_exc(type(e).__name__, snapshot)
             continue
 
