@@ -68,160 +68,167 @@ def stream_response(stream, parts: list):
 def chat(first: str | None = None):
     while True:
         try:
-            user_input: str | None
-            if first:
-                user_input, first = first, None
-            else:
-                user_input = console.input()  # Default 'you:'
+            try:
+                user_input: str | None
+                if first:
+                    user_input, first = first, None
+                else:
+                    user_input = console.input()  # Default 'you:'
 
-            if user_input is None:
+                if user_input is None:
+                    break
+
+                if user_input.startswith("/"):
+                    command_handler.parse(user_input)
+                    continue
+            except (EOFError, KeyboardInterrupt):
                 break
 
-            if user_input.startswith("/"):
-                command_handler.parse(user_input)
-                continue
-        except (EOFError, KeyboardInterrupt):
-            break
+            snapshot = len(messages.messages)
 
-        snapshot = len(messages.messages)
+            messages.messages.append({"role": "user", "content": user_input})
 
-        messages.messages.append({"role": "user", "content": user_input})
+            try:
+                while True:
+                    parts: list[str] = []
+                    final = None
+                    try:
+                        with client.client().messages.stream(
+                            model=settings.model,
+                            max_tokens=32768,
+                            system=messages.sys_prompt(),
+                            tools=client.client().tools(),
+                            messages=messages.messages,
+                        ) as stream:
+                            final = stream_response(stream, parts)
+                    except KeyboardInterrupt:
+                        pass
 
-        try:
-            while True:
-                parts: list[str] = []
-                final = None
-                try:
-                    with client.client().messages.stream(
-                        model=settings.model,
-                        max_tokens=32768,
-                        system=messages.sys_prompt(),
-                        tools=client.client().tools(),
-                        messages=messages.messages,
-                    ) as stream:
-                        final = stream_response(stream, parts)
-                except KeyboardInterrupt:
-                    pass
+                    if final is None:
+                        partial = "".join(parts).strip()
+                        if partial:
+                            messages.messages.append(
+                                {
+                                    "role": "assistant",
+                                    "content": partial + "\n\n[interrupted]",
+                                }
+                            )
+                        else:
+                            del messages.messages[snapshot:]
+                        console.dim(" interrupted")
+                        break
 
-                if final is None:
-                    partial = "".join(parts).strip()
-                    if partial:
-                        messages.messages.append(
-                            {
-                                "role": "assistant",
-                                "content": partial + "\n\n[interrupted]",
-                            }
-                        )
-                    else:
-                        del messages.messages[snapshot:]
-                    console.dim(" interrupted")
-                    break
+                    if final.stop_reason == "max_tokens":
+                        console.warn("    hit max_tokens, reply truncated")
 
-                if final.stop_reason == "max_tokens":
-                    console.warn("    hit max_tokens, reply truncated")
+                    messages.messages.append({"role": "assistant", "content": final.content})
 
-                messages.messages.append({"role": "assistant", "content": final.content})
+                    for block in final.content:
+                        t = block.type
 
-                for block in final.content:
-                    t = block.type
+                        if t == "server_tool_use":
+                            if block.name == "web_search":
+                                console.dim(f"  ▪ search  {block.input.get('query', '')}")
+                            continue
 
-                    if t == "server_tool_use":
-                        if block.name == "web_search":
-                            console.dim(f"  ▪ search  {block.input.get('query', '')}")
-                        continue
+                        if t == "web_search_tool_result":
+                            n = len(block.content) if isinstance(block.content, list) else 0
+                            console.dim(f"    ↳ {n} results")
+                            continue
 
-                    if t == "web_search_tool_result":
-                        n = len(block.content) if isinstance(block.content, list) else 0
-                        console.dim(f"    ↳ {n} results")
-                        continue
+                    if final.stop_reason != "tool_use":
+                        break
 
-                if final.stop_reason != "tool_use":
-                    break
+                    results = []
+                    aborted = False
+                    for block in final.content:
+                        t = block.type
 
-                results = []
-                aborted = False
-                for block in final.content:
-                    t = block.type
+                        if t == "thinking":
+                            continue
 
-                    if t == "thinking":
-                        continue
+                        if t != "tool_use":
+                            continue
 
-                    if t != "tool_use":
-                        continue
+                        if aborted:
+                            results.append(
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": block.id,
+                                    "content": "interrupted by user.",
+                                    "is_error": True,
+                                }
+                            )
+                            continue
 
-                    if aborted:
+                        args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
+                        suffix = f"with {args}" if block.input else ""
+                        console.dim(f"  ▪ {block.name} {suffix}")
+
+                        try:
+                            output = named_tool_functions[block.name](
+                                **block.input, mode=settings.mode
+                            )
+                            is_error = False
+                        except KeyboardInterrupt:
+                            output, is_error, aborted = "Interrupted by user.", True, True
+                        except TypeError as e:
+                            output = (
+                                f"{e}. Check the tool's input_schema for exact parameter names."
+                            )
+                            is_error = True
+                        except Exception as e:
+                            output, is_error = f"{type(e).__name__}: {e}", True
+
+                        if (
+                            block.name not in SILENT
+                        ):  # Ignore large dumps from readfile / reprinting ask_user_question
+                            console.tool_result(output, is_error)
+
                         results.append(
                             {
                                 "type": "tool_result",
                                 "tool_use_id": block.id,
-                                "content": "interrupted by user.",
-                                "is_error": True,
+                                "content": str(output),
+                                "is_error": is_error,
                             }
                         )
-                        continue
 
-                    args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
-                    suffix = f"with {args}" if block.input else ""
-                    console.dim(f"  ▪ {block.name} {suffix}")
+                    messages.messages.append({"role": "user", "content": results})
 
-                    try:
-                        output = named_tool_functions[block.name](**block.input, mode=settings.mode)
-                        is_error = False
-                    except KeyboardInterrupt:
-                        output, is_error, aborted = "Interrupted by user.", True, True
-                    except TypeError as e:
-                        output = f"{e}. Check the tool's input_schema for exact parameter names."
-                        is_error = True
-                    except Exception as e:
-                        output, is_error = f"{type(e).__name__}: {e}", True
+                    if aborted:
+                        break
 
-                    if (
-                        block.name not in SILENT
-                    ):  # Ignore large dumps from readfile / reprinting ask_user_question
-                        console.tool_result(output, is_error)
+                print()
 
-                    results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": str(output),
-                            "is_error": is_error,
-                        }
-                    )
+            except anthropic.APIConnectionError as e:
+                handler.log(e)
+                messages.save_exc(type(e).__name__, snapshot)
 
-                messages.messages.append({"role": "user", "content": results})
+            except anthropic.RateLimitError as e:
+                handler.log(e)
+                messages.save_exc(type(e).__name__, snapshot)
 
-                if aborted:
-                    break
+            except anthropic.APIStatusError as e:
+                handler.log(e)
+                messages.save_exc(type(e).__name__, snapshot)
+                continue
 
-            print()
+            except ValueError as e:
+                handler.log(e)
+                messages.save_exc(type(e).__name__, snapshot)
+                continue
 
-        except anthropic.APIConnectionError as e:
-            handler.log(e)
-            messages.save_exc(type(e).__name__, snapshot)
+            if final:
+                u = final.usage
 
-        except anthropic.RateLimitError as e:
-            handler.log(e)
-            messages.save_exc(type(e).__name__, snapshot)
+                stats["session_input_tokens"] += u.input_tokens
+                stats["session_output_tokens"] += u.output_tokens
 
-        except anthropic.APIStatusError as e:
-            handler.log(e)
-            messages.save_exc(type(e).__name__, snapshot)
+                cost = (
+                    stats["session_input_tokens"] * 2 + stats["session_output_tokens"] * 10
+                ) / 1_000_000
+
+                console.dim(f"{settings.model} · {settings.mode} · session: ${cost:.3f} ($2, $10)")
+        except KeyboardInterrupt:
             continue
-
-        except ValueError as e:
-            handler.log(e)
-            messages.save_exc(type(e).__name__, snapshot)
-            continue
-
-        if final:
-            u = final.usage
-
-            stats["session_input_tokens"] += u.input_tokens
-            stats["session_output_tokens"] += u.output_tokens
-
-            cost = (
-                stats["session_input_tokens"] * 2 + stats["session_output_tokens"] * 10
-            ) / 1_000_000
-
-            console.dim(f"{settings.model} · {settings.mode} · session: ${cost:.3f} ($2, $10)")
