@@ -95,7 +95,7 @@ def chat(first: str | None = None):
                         model=settings.model,
                         max_tokens=32768,
                         system=messages.sys_prompt(),
-                        tools=tools.tools,
+                        tools=client.client().tools(),
                         messages=messages.messages,
                     ) as stream:
                         final = stream_response(stream, parts)

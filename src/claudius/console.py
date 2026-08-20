@@ -1,4 +1,6 @@
+import os
 import shutil
+import subprocess
 
 import questionary as qt
 from rich.console import Console as RichConsole
@@ -87,6 +89,9 @@ class Console:
         style = "err" if is_error else "dim"
         for line in lines:
             self._print(f"    {line}", style=style)
+
+    def clear(self):
+        subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
 
     # semantics
     def info(self, msg):

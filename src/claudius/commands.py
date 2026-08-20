@@ -7,7 +7,6 @@ from claudius.clients import client
 from claudius.console import console
 from claudius.messages import messages
 from claudius.settings import settings
-from claudius.tools import tools
 
 
 class CommandHandler:
@@ -87,16 +86,6 @@ class CommandHandler:
         else:
             console.info(f"Current mode: {settings.mode} (available: 'manual', 'auto')")
 
-    def _tools(self):
-        if not tools:
-            console.dim("No tools registered")
-            return
-
-        width = max(len(t["name"]) for t in tools)
-        for t in tools:
-            desc = t.get("description") or "Description not found"
-            console.info(f"  {t['name']:<{width}}  [dim]{desc}")
-
     def _save(self, args: str | None):
         messages.save(Path(f"{settings.chats_dir}/chat-{args}.json"))
         console.success("Saved messages")
@@ -118,9 +107,6 @@ class CommandHandler:
 
         if cmd == "model":
             return self._model(args=args)
-
-        elif cmd == "tools":
-            self._tools()
 
         elif cmd == "save":
             self._save(args=args)

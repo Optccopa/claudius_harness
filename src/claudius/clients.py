@@ -1,6 +1,7 @@
 import anthropic
 
 from claudius.settings import settings
+from claudius.tools import tools
 
 
 class Anthropic(anthropic.Anthropic):
@@ -9,6 +10,10 @@ class Anthropic(anthropic.Anthropic):
             raise ValueError("Failed loading Anthropic api key, set ANTHROPIC_API_KEY in .env")
 
         super().__init__(api_key=settings.anthropic_api_key)
+
+    def tools(self) -> list:
+        """Defines the tools used when calling models on the client"""
+        return tools
 
 
 class OpenRouter(anthropic.Anthropic):
@@ -22,6 +27,14 @@ class OpenRouter(anthropic.Anthropic):
             max_retries=0,
         )
 
+    def tools(self) -> list:
+        """Defines the tools used when calling models on the client"""
+        return [
+            t
+            for t in tools
+            if t.get("type") is None  # skip anthropic server side tools
+        ]
+
 
 class Ollama(anthropic.Anthropic):
     def __init__(self):
@@ -31,6 +44,14 @@ class Ollama(anthropic.Anthropic):
             max_retries=0,
         )
 
+    def tools(self) -> list:
+        """Defines the tools used when calling models on the client"""
+        return [
+            t
+            for t in tools
+            if t.get("type") is None  # skip anthropic server side tools
+        ]
+
 
 class LazyClient:
     def __init__(self):
@@ -38,7 +59,7 @@ class LazyClient:
         self._openrouter: OpenRouter | None = None
         self._ollama: Ollama | None = None
 
-    def client(self, source: str | None = None):
+    def client(self, source: str | None = None) -> Anthropic | OpenRouter | Ollama:
         if (
             source == "ollama"
             or source is None

@@ -1,7 +1,6 @@
 import argparse
-import os
-import subprocess
 
+from claudius.console import console
 from claudius.main import chat
 
 
@@ -12,7 +11,7 @@ def main():
     parser.add_argument("user_input", nargs="?")
     args = parser.parse_args()
 
-    subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
+    console.clear()
 
     chat(args.user_input)
 
