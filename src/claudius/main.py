@@ -9,8 +9,9 @@ from rich.markdown import Markdown
 
 from claudius import tools
 from claudius.clients import client
-from claudius.commands import handler
+from claudius.commands import handler as command_handler
 from claudius.console import console
+from claudius.errorhandler import handler
 from claudius.messages import messages
 from claudius.settings import settings
 
@@ -77,7 +78,7 @@ def chat(first: str | None = None):
                 break
 
             if user_input.startswith("/"):
-                handler.parse(user_input)
+                command_handler.parse(user_input)
                 continue
         except (EOFError, KeyboardInterrupt):
             break
@@ -196,25 +197,20 @@ def chat(first: str | None = None):
             print()
 
         except anthropic.APIConnectionError as e:
-            console.error(
-                f"{type(e).__name__}: {e.message} {e.__cause__}",
-            )
+            handler.log(e)
             messages.save_exc(type(e).__name__, snapshot)
 
         except anthropic.RateLimitError as e:
-            console.error(f"{type(e).__name__}: {e.message}")
+            handler.log(e)
             messages.save_exc(type(e).__name__, snapshot)
 
         except anthropic.APIStatusError as e:
-            error = e.body.get("error") if isinstance(e.body, dict) else None
-            console.error(
-                f"{type(e).__name__}: {error.get('message') if isinstance(error, dict) else e.message}"
-            )
+            handler.log(e)
             messages.save_exc(type(e).__name__, snapshot)
             continue
 
         except ValueError as e:
-            console.error(f"{type(e).__name__}: {e}")
+            handler.log(e)
             messages.save_exc(type(e).__name__, snapshot)
             continue
 
