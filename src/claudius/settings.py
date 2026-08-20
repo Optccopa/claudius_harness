@@ -8,8 +8,6 @@ from platformdirs import user_data_dir
 
 class Settings:
     def __init__(self):
-        self.base_dir = Path(__file__).resolve().parent.parent.parent
-
         self.claudius_dir = Path(user_data_dir(".claudius", appauthor=False))
 
         self.cwd = Path().resolve()
@@ -37,7 +35,7 @@ class Settings:
         self.model = self.load()["model"]
         self.mode = "manual"
 
-        self.system_file = self.base_dir / "SYSTEM.md"
+        self.system_file = Path(__file__).resolve().parent / "SYSTEM.md"
 
         self.chats_dir = self.claudius_dir / "chats"
         self.chats_dir.mkdir(exist_ok=True, parents=True)
@@ -47,11 +45,8 @@ class Settings:
 
     def _print_for_env_file(self):
         if not self.env_file.exists():
-            example = self.base_dir / "example.env"
             self.env_file.write_text(
-                example.read_text(encoding="utf-8")
-                if example.exists()
-                else "ANTHROPIC_API_KEY=\nOPENROUTER_API_KEY=\n",
+                "ANTHROPIC_API_KEY=\nOPENROUTER_API_KEY=\n",
                 encoding="utf-8",
             )
             print(

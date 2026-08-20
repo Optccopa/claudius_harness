@@ -35,6 +35,9 @@ Repository = "https://github.com/Optccopa/claudius_harness"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+claudius = ["SYSTEM.md"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
