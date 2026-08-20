@@ -6,24 +6,31 @@ from claudius.settings import settings
 
 
 class ErrorHandler:
-    def describe(self, exc: Exception) -> str:
-        tb = exc.__traceback__
-        summary = traceback.extract_tb(tb)
+    def _location(self, exc: Exception) -> str:
+        summary = traceback.extract_tb(exc.__traceback__)
 
-        if summary:
-            last_frame = summary[-1]
-            line_number = last_frame.lineno
-            path = Path(last_frame.filename)
-        else:
-            line_number = 0
-            path = Path()
+        if not summary:
+            return "unknown location"
+
+        frame = summary[-1]
+        line_number = frame.lineno or 0
+        filename = frame.filename or "<unknown>"
+
+        if filename.startswith("<"):
+            return f"{filename}:{line_number}"
 
         try:
-            relative = path.relative_to(settings.cwd)
-        except ValueError:
-            relative = settings.cwd / "CLAUDE.md"
+            path = Path(filename).resolve()
+        except OSError:
+            path = Path(filename)
 
-        return f"{type(exc).__name__} @ {relative}:{line_number}\n"
+        try:
+            return f"{path.relative_to(settings.cwd)}:{line_number}"
+        except ValueError:
+            return f"{path}:{line_number}"
+
+    def describe(self, exc: Exception) -> str:
+        return f"{type(exc).__name__} @ {self._location(exc)}\n"
 
     def exit(self, exc: Exception):
         console.error(f"Claudius has crashed :(\n{self.describe(exc)}")
