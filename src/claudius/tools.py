@@ -428,12 +428,12 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None, **kwa
     if start_line > end_line:
         raise ValueError("Start line cannot be after end line")
     read = []
-    for i, l in enumerate(lines, 1):
+    for i, line in enumerate(lines, 1):
         if i < start_line:
             continue
         if i > end_line:
             continue
-        read.append(f"{i} {l}")
+        read.append(f"{i} {line}")
 
     return "".join(read)
 
@@ -541,7 +541,7 @@ def grep(pattern: str, path: str = ".", glob_filter: str = "**/*",
         except (UnicodeDecodeError, OSError):
             continue
 
-        matched = [i for i, l in enumerate(lines) if rx.search(l)]
+        matched = [i for i, line in enumerate(lines) if rx.search(line)]
         if not matched:
             continue
         count += len(matched)
