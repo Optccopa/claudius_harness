@@ -1,6 +1,7 @@
 """
 Main CLI assistant, run with `claudius "hello"`
 """
+
 import inspect
 
 import anthropic
@@ -8,32 +9,22 @@ from rich.markdown import Markdown
 from rich.markup import RE_TAGS
 
 from claudius import tools
-
+from claudius.clients import client
+from claudius.commands import handler
 from claudius.console import console
+from claudius.messages import messages
 from claudius.settings import settings
 
-from claudius.clients import client
+SILENT = ["read_file", "ask_user_question", "git_diff", "tree"]
 
-from claudius.messages import messages
-from claudius.commands import handler
-
-SILENT = [
-    "read_file",
-    "ask_user_question",
-    "git_diff",
-    "tree"
-]
-
-stats = {
-    "session_input_tokens": 0,
-    "session_output_tokens": 0
-}
+stats = {"session_input_tokens": 0, "session_output_tokens": 0}
 
 named_tool_functions = {
     name: fn
     for name, fn in inspect.getmembers(tools, inspect.isfunction)
     if fn.__module__ == tools.__name__ and not name.startswith("_")
 }
+
 
 def stream_response(stream, parts: list):
     buf = ""
@@ -72,6 +63,7 @@ def stream_response(stream, parts: list):
 
     return stream.get_final_message()
 
+
 def chat(first: str | None = None):
     while True:
         try:
@@ -79,7 +71,7 @@ def chat(first: str | None = None):
             if first:
                 user_input, first = first, None
             else:
-                user_input = console.input() # Default 'you:'
+                user_input = console.input()  # Default 'you:'
 
             if user_input is None:
                 break
@@ -104,7 +96,7 @@ def chat(first: str | None = None):
                         max_tokens=32768,
                         system=messages.sys_prompt(),
                         tools=tools.tools,
-                        messages=messages.messages
+                        messages=messages.messages,
                     ) as stream:
                         final = stream_response(stream, parts)
                 except KeyboardInterrupt:
@@ -113,10 +105,12 @@ def chat(first: str | None = None):
                 if final is None:
                     partial = "".join(parts).strip()
                     if partial:
-                        messages.messages.append({
-                            "role": "assistant",
-                            "content": partial + "\n\n[interrupted]",
-                        })
+                        messages.messages.append(
+                            {
+                                "role": "assistant",
+                                "content": partial + "\n\n[interrupted]",
+                            }
+                        )
                     else:
                         del messages.messages[snapshot:]
                     console.dim(" interrupted")
@@ -132,7 +126,7 @@ def chat(first: str | None = None):
 
                     if t == "server_tool_use":
                         if block.name == "web_search":
-                            console.dim(f"  ▪ search  {block.input.get('query','')}")
+                            console.dim(f"  ▪ search  {block.input.get('query', '')}")
                         continue
 
                     if t == "web_search_tool_result":
@@ -155,12 +149,14 @@ def chat(first: str | None = None):
                         continue
 
                     if aborted:
-                        results.append({
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": "interrupted by user.",
-                            "is_error": True,
-                        })
+                        results.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": block.id,
+                                "content": "interrupted by user.",
+                                "is_error": True,
+                            }
+                        )
                         continue
 
                     args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
@@ -178,15 +174,19 @@ def chat(first: str | None = None):
                     except Exception as e:
                         output, is_error = f"{type(e).__name__}: {e}", True
 
-                    if block.name not in SILENT: # Ignore large dumps from readfile / reprinting ask_user_question
+                    if (
+                        block.name not in SILENT
+                    ):  # Ignore large dumps from readfile / reprinting ask_user_question
                         console.tool_result(output, is_error)
 
-                    results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": str(output),
-                        "is_error": is_error,
-                    })
+                    results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": str(output),
+                            "is_error": is_error,
+                        }
+                    )
 
                 messages.messages.append({"role": "user", "content": results})
 
@@ -217,11 +217,11 @@ def chat(first: str | None = None):
         if final:
             u = final.usage
 
-            stats['session_input_tokens'] += u.input_tokens
-            stats['session_output_tokens'] += u.output_tokens
+            stats["session_input_tokens"] += u.input_tokens
+            stats["session_output_tokens"] += u.output_tokens
 
             cost = (
-                stats['session_input_tokens'] * 2
-                + stats['session_output_tokens'] * 10) / 1_000_000
+                stats["session_input_tokens"] * 2 + stats["session_output_tokens"] * 10
+            ) / 1_000_000
 
             console.dim(f"{settings.model} · {settings.mode} · session: ${cost:.3f} ($2, $10)")

@@ -2,28 +2,28 @@ import shutil
 
 import questionary as qt
 from rich.console import Console as RichConsole
+from rich.markdown import Markdown
 from rich.markup import RE_TAGS
 from rich.theme import Theme
-from rich.markdown import Markdown
 
 COLORS = {
-    "body":   "#e8e3d8",
+    "body": "#e8e3d8",
     "accent": "#D97757",
-    "dim":    "#8a8175",
-    "user":   "#b9f2ff",
-    "ok":     "#7fb069",
-    "warn":   "#d9a75f",
-    "err":    "#d9605a",
-
-    "markdown.code": "#D97757"
+    "dim": "#8a8175",
+    "user": "#b9f2ff",
+    "ok": "#7fb069",
+    "warn": "#d9a75f",
+    "err": "#d9605a",
+    "markdown.code": "#D97757",
 }
+
 
 class Console:
     def __init__(self):
         self._rich = RichConsole(
             theme=Theme(COLORS),
             highlight=False,
-            width=min(shutil.get_terminal_size((80, 24)).columns, 100)
+            width=min(shutil.get_terminal_size((80, 24)).columns, 100),
         )
 
     def _print(self, *values, sep: str = " ", end: str = "\n", style: str = "body") -> None:
@@ -52,7 +52,7 @@ class Console:
 
     def partial(self, text: str) -> None:
         width = self._rich.width
-        show = text if len(text) < width else "…" + text[-(width - 2):]
+        show = text if len(text) < width else "…" + text[-(width - 2) :]
         self._rich.file.write(f"\r\x1b[K{show}")
         self._rich.file.flush()
 
@@ -69,8 +69,9 @@ class Console:
             self._rich.file.write("\x1b[1A\x1b[K")
         self._rich.file.flush()
 
-    def tool_result(self, output, is_error: bool = False,
-                     max_lines: int = 12, max_chars: int = 2000) -> None:
+    def tool_result(
+        self, output, is_error: bool = False, max_lines: int = 12, max_chars: int = 2000
+    ) -> None:
         text = RE_TAGS.sub("", (str(output)).strip())
         if not text:
             return
@@ -88,10 +89,20 @@ class Console:
             self._print(f"    {line}", style=style)
 
     # semantics
-    def info(self, msg):    self._print(msg, style="body")
-    def success(self, msg): self._print(msg, style="ok")
-    def warn(self, msg):    self._print(msg, style="warn")
-    def error(self, msg):   self._print(msg, style="err")
-    def dim(self, msg):     self._print(msg, style="dim")
+    def info(self, msg):
+        self._print(msg, style="body")
+
+    def success(self, msg):
+        self._print(msg, style="ok")
+
+    def warn(self, msg):
+        self._print(msg, style="warn")
+
+    def error(self, msg):
+        self._print(msg, style="err")
+
+    def dim(self, msg):
+        self._print(msg, style="dim")
+
 
 console = Console()

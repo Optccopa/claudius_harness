@@ -3,20 +3,22 @@ import json
 import platform
 from pathlib import Path
 
-from claudius.settings import settings
 from claudius.console import console
+from claudius.settings import settings
 
 warned = False
+
 
 def _prompt_for_permission():
     if console.confirm(
         "Do you trust this project and want to adopt its CLAUDE.md file into your system prompt"
-        ):
+    ):
         settings.save_key(**{f"{settings.cwd.absolute()}:IsTrustedWorkspace": True})
         return True
     else:
         settings.save_key(**{f"{settings.cwd.absolute()}:IsTrustedWorkspace": False})
         return False
+
 
 def _claude_md() -> str:
     global warned
@@ -31,6 +33,7 @@ def _claude_md() -> str:
             console.error(f"Could not find CLAUDE.md at {settings.claude_file}")
             warned = True
         return ""
+
 
 class Messages:
     def __init__(self):
@@ -47,24 +50,20 @@ class Messages:
         system = system.replace("{{model}}", settings.model)
         system = system.replace("{{time}}", time)
         system = system.replace("{{dir}}", str(Path().resolve()))
-        system = system.replace(
-            "{{platform}}",
-            platform.system() or "Undetermined"
-        )
+        system = system.replace("{{platform}}", platform.system() or "Undetermined")
         trusted = settings.load().get(f"{settings.cwd.absolute()}:IsTrustedWorkspace")
 
-        if trusted is None: # never prompted before
-
-            if _prompt_for_permission(): # accepted
+        if trusted is None:  # never prompted before
+            if _prompt_for_permission():  # accepted
                 system = system.replace("{{claude_md}}", _claude_md())
 
-            else: # denied on first run
+            else:  # denied on first run
                 system = system.replace("{{claude_md}}", "")
 
-        elif trusted is True: # prompted and said yes
+        elif trusted is True:  # prompted and said yes
             system = system.replace("{{claude_md}}", _claude_md())
 
-        else: # prompted and said no / other
+        else:  # prompted and said no / other
             system = system.replace("{{claude_md}}", "")
 
         system = system.rstrip()
@@ -78,9 +77,12 @@ class Messages:
             return b if isinstance(b, dict) else b.model_dump(mode="json", exclude_none=True)
 
         out = [
-            {"role": m["role"],
-            "content": m["content"] if isinstance(m["content"], str)
-                        else [to_dict(b) for b in m["content"]]}
+            {
+                "role": m["role"],
+                "content": m["content"]
+                if isinstance(m["content"], str)
+                else [to_dict(b) for b in m["content"]],
+            }
             for m in self.messages
         ]
 
@@ -102,5 +104,6 @@ class Messages:
 
     def load(self, path: Path):
         self.messages = json.loads(Path(path).read_text(encoding="utf-8"))
+
 
 messages = Messages()

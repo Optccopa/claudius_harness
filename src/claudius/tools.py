@@ -1,7 +1,7 @@
 import difflib
-import subprocess
 import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -10,24 +10,22 @@ from rich.theme import Theme
 
 from claudius.console import Console
 
-theme = Theme({
-    "body":   "#e8e3d8",
-    "accent": "#D97757",
-    "dim":    "#8a8175",
-    "user":   "#b9f2ff",
-    "ok":     "#7fb069",
-    "warn":   "#d9a75f",
-    "err":    "#d9605a",
-})
+theme = Theme(
+    {
+        "body": "#e8e3d8",
+        "accent": "#D97757",
+        "dim": "#8a8175",
+        "user": "#b9f2ff",
+        "ok": "#7fb069",
+        "warn": "#d9a75f",
+        "err": "#d9605a",
+    }
+)
 
 console = Console()
 
 tools: list[dict[str, Any]] = [
-    {
-        "type": "web_search_20260209",
-        "name": "web_search",
-        "max_uses": 5
-    },
+    {"type": "web_search_20260209", "name": "web_search", "max_uses": 5},
     {
         "name": "ask_user_question",
         "description": "Ask a question in a structured format, reach for this when you need clarification",
@@ -35,33 +33,30 @@ tools: list[dict[str, Any]] = [
             "type": "object",
             "required": ["question", "choices"],
             "properties": {
-                "question": {
-                    "type": "string",
-                    "description": "The question to ask the user"
-                },
+                "question": {"type": "string", "description": "The question to ask the user"},
                 "choices": {
                     "type": "array",
                     "description": "Short answer options. An extra field is appended for the user to provide extras",
                     "items": {"type": "string"},
-                    "minItems": 1
+                    "minItems": 1,
                 },
                 "max_answers": {
                     "type": "integer",
-                    "description": "Max allowed choices the user can provide, default: 1"
-                }
-            }
+                    "description": "Max allowed choices the user can provide, default: 1",
+                },
+            },
         },
         "input_examples": [
             {
                 "question": "What httplib should i use?",
-                "choices": ["aiohttp", "requests (blocking)", "stdlib (blocking)"]
+                "choices": ["aiohttp", "requests (blocking)", "stdlib (blocking)"],
             },
             {
                 "question": "What should i fix right now?",
                 "choices": ["Offset fov", "Bullet clipping", "StackOverflow in main"],
-                "max_answers": 3
-            }
-        ]
+                "max_answers": 3,
+            },
+        ],
     },
     {
         "name": "read_file",
@@ -80,25 +75,23 @@ tools: list[dict[str, Any]] = [
                 "start_line": {
                     "type": "integer",
                     "description": "Start of lines to read",
-                    "minimum": 0
+                    "minimum": 0,
                 },
                 "end_line": {
                     "type": "integer",
                     "description": "End of lines to read",
-                    "minimum": 1
-                }
-            }
+                    "minimum": 1,
+                },
+            },
         },
         "input_examples": [
             {
                 "path": r"C:\Users\Copa\Documents\GitHub\ClaudiusCraft\game.py",
                 "start_line": 22,
-                "end_line": 52
+                "end_line": 52,
             },
-            {
-                "path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\main.py"
-            }
-        ]
+            {"path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\main.py"},
+        ],
     },
     {
         "name": "tree",
@@ -110,12 +103,9 @@ tools: list[dict[str, Any]] = [
             "type": "object",
             "required": [],
             "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to list, default: project dir"
-                }
-            }
-        }
+                "path": {"type": "string", "description": "Path to list, default: project dir"}
+            },
+        },
     },
     {
         "name": "glob",
@@ -123,7 +113,7 @@ tools: list[dict[str, Any]] = [
             "- Fast file pattern matching tool that works with any codebase size\n"
             "- This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
             "- Reach for powershell if nothing else without permission requirements fits\n"
-            "- Supports glob patterns like \"**/*.py\" or \"src/**/*.ts\"\n"
+            '- Supports glob patterns like "**/*.py" or "src/**/*.ts"\n'
             "- Returns matching file paths sorted by modification time, newest first\n"
             "- Use this tool when you need to find files by name patterns\n"
             "- Use tree instead when you want to see the shape of a directory\n"
@@ -144,7 +134,7 @@ tools: list[dict[str, Any]] = [
                     "description": (
                         "The directory to search in. If not specified, the current working "
                         "directory will be used. IMPORTANT: Omit this field to use the default "
-                        "directory. DO NOT enter \"undefined\" or \"null\" - simply omit it for "
+                        'directory. DO NOT enter "undefined" or "null" - simply omit it for '
                         "the default behavior."
                     ),
                 },
@@ -158,8 +148,8 @@ tools: list[dict[str, Any]] = [
             "- Searches file contents using regular expressions\n"
             "- This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
             "- Reach for powershell if nothing else without permission requirements fits\n"
-            "- Supports full regex syntax (e.g. \"log.*Error\", \"def\\\\s+\\\\w+\")\n"
-            "- Filter which files are searched with glob_filter (e.g. \"**/*.py\")\n"
+            '- Supports full regex syntax (e.g. "log.*Error", "def\\\\s+\\\\w+")\n'
+            '- Filter which files are searched with glob_filter (e.g. "**/*.py")\n'
             "- Returns matching lines with line numbers\n"
             "- Use this instead of Select-String\n"
             "- Set files_only=true when you only need to know which files match — "
@@ -180,14 +170,14 @@ tools: list[dict[str, Any]] = [
                     "description": (
                         "The directory to search in. If not specified, the current working "
                         "directory will be used. IMPORTANT: Omit this field to use the default "
-                        "directory. DO NOT enter \"undefined\" or \"null\" - simply omit it for "
+                        'directory. DO NOT enter "undefined" or "null" - simply omit it for '
                         "the default behavior."
                     ),
                 },
                 "glob_filter": {
                     "type": "string",
                     "description": (
-                        "Glob pattern limiting which files are searched, e.g. \"**/*.py\". "
+                        'Glob pattern limiting which files are searched, e.g. "**/*.py". '
                         "Defaults to every file."
                     ),
                 },
@@ -209,10 +199,10 @@ tools: list[dict[str, Any]] = [
                     "description": (
                         "Lines of context to show before and after each match. Default 0. "
                         "Ignored when files_only is true."
-                    )
-                }
-            }
-        }
+                    ),
+                },
+            },
+        },
     },
     {
         "name": "git_status",
@@ -221,11 +211,7 @@ tools: list[dict[str, Any]] = [
             "This command has no permission requirements, PREFER THIS OVER OTHER TOOLS\n"
             "Reach for powershell if nothing else without permission requirements fits"
         ),
-        "input_schema": {
-            "type": "object",
-            "required": [],
-            "properties": {}
-        }
+        "input_schema": {"type": "object", "required": [], "properties": {}},
     },
     {
         "name": "git_diff",
@@ -241,10 +227,10 @@ tools: list[dict[str, Any]] = [
             "properties": {
                 "file_name": {
                     "type": "string",
-                    "description": "Path to the file to diff, relative to the repo root"
+                    "description": "Path to the file to diff, relative to the repo root",
                 }
-            }
-        }
+            },
+        },
     },
     {
         "name": "powershell",
@@ -294,22 +280,19 @@ tools: list[dict[str, Any]] = [
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "The file to edit, provide a global directory"
+                    "description": "The file to edit, provide a global directory",
                 },
                 "old_string": {
                     "type": "string",
-                    "description": "Exact text to replace, without line numbers"
+                    "description": "Exact text to replace, without line numbers",
                 },
-                "new_string": {
-                    "type": "string",
-                    "description": "Text to replace it with"
-                },
+                "new_string": {"type": "string", "description": "Text to replace it with"},
                 "replace_all": {
                     "type": "boolean",
-                    "description": "Replace every occurrence instead of requiring uniqueness. default: false"
-                }
-            }
-        }
+                    "description": "Replace every occurrence instead of requiring uniqueness. default: false",
+                },
+            },
+        },
     },
     {
         "name": "create_file",
@@ -326,25 +309,27 @@ tools: list[dict[str, Any]] = [
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "The file to create, provide a global directory"
+                    "description": "The file to create, provide a global directory",
                 },
                 "content": {
                     "type": "string",
-                    "description": "The content that is written to the file on creation"
-                }
-            }
+                    "description": "The content that is written to the file on creation",
+                },
+            },
         },
         "input_examples": [
             {
                 "path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\new_module.py",
-                "content": "This content gets written in the file"
+                "content": "This content gets written in the file",
             }
-        ]
-    }
+        ],
+    },
 ]
+
 
 class RejectedToolUse(Exception):
     """Your tool use was manually rejected by the user"""
+
 
 def _raise_for_permission(label: str, mode: str):
     if mode == "auto":
@@ -358,6 +343,7 @@ def _raise_for_permission(label: str, mode: str):
         )
         if not ok:
             raise RejectedToolUse(f"Your tool use was rejected, {label}")
+
 
 def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
     old_lines = old.splitlines()
@@ -383,12 +369,13 @@ def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
                     shown += 1
     console._print("")
 
+
 def ask_user_question(question: str, choices: list, max_answers: int = 1, **kwargs):
     choices = list(choices) + ["Other"]
     response = qt.checkbox(
         question,
         choices,
-        validate=lambda sel: True if len(sel) <= max_answers else f"Pick at most {max_answers}"
+        validate=lambda sel: True if len(sel) <= max_answers else f"Pick at most {max_answers}",
     ).ask()
 
     if not response:
@@ -399,12 +386,16 @@ def ask_user_question(question: str, choices: list, max_answers: int = 1, **kwar
     else:
         return response
 
+
 def powershell(command: str, timeout: int = 60, **kwargs) -> str:
     _raise_for_permission(command, str(kwargs.get("mode")))
     try:
         r = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", command],
-            cwd=os.getcwd(), capture_output=True, text=True, errors="replace",
+            cwd=os.getcwd(),
+            capture_output=True,
+            text=True,
+            errors="replace",
             timeout=min(timeout, 600),
         )
     except subprocess.TimeoutExpired:
@@ -417,6 +408,7 @@ def powershell(command: str, timeout: int = 60, **kwargs) -> str:
     if r.returncode != 0:
         return f"exit {r.returncode}\n{out}"
     return out or "(no output)"
+
 
 def read_file(path: str, start_line: int = 0, end_line: int | None = None, **kwargs):
     with open(path, encoding="utf-8") as f:
@@ -437,8 +429,10 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None, **kwa
 
     return "".join(read)
 
-def edit_file(path: str, old_string: str = "", new_string: str = "",
-              replace_all: bool = False, **kwargs) -> str:
+
+def edit_file(
+    path: str, old_string: str = "", new_string: str = "", replace_all: bool = False, **kwargs
+) -> str:
     old_string = old_string or kwargs.get("old_str", "")
     new_string = new_string or kwargs.get("new_str", "")
     p = Path(path)
@@ -478,6 +472,7 @@ def edit_file(path: str, old_string: str = "", new_string: str = "",
     p.write_text(updated, encoding="utf-8")
     return f"Edited {path} ({count} replacement{'s' if count != 1 else ''})"
 
+
 def create_file(path: str | Path, content: str | None = None, **kwargs):
     path = Path(path)
     if path.exists():
@@ -494,7 +489,8 @@ def create_file(path: str | Path, content: str | None = None, **kwargs):
     with open(path, "w", encoding="utf-8") as f:
         f.write(content or "")
 
-    return (f"Created file at {path.resolve()}")
+    return f"Created file at {path.resolve()}"
+
 
 def tree(path: Path = Path("."), prefix: str = "", **kwargs) -> str:
     entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
@@ -507,6 +503,7 @@ def tree(path: Path = Path("."), prefix: str = "", **kwargs) -> str:
         if e.is_dir():
             out.append(tree(e, prefix + ("    " if last else "|   ")))
     return "\n".join(filter(None, out))
+
 
 def glob(pattern: str, path: str = str(Path().resolve()), **kwargs) -> str:
     root = Path(path)
@@ -524,9 +521,16 @@ def glob(pattern: str, path: str = str(Path().resolve()), **kwargs) -> str:
         out.append(f"[{len(hits)} total, showing 200]")
     return "\n".join(out)
 
-def grep(pattern: str, path: str = ".", glob_filter: str = "**/*",
-         case_insensitive: bool = False, files_only: bool = False,
-         context: int = 0, **kwargs) -> str:
+
+def grep(
+    pattern: str,
+    path: str = ".",
+    glob_filter: str = "**/*",
+    case_insensitive: bool = False,
+    files_only: bool = False,
+    context: int = 0,
+    **kwargs,
+) -> str:
     try:
         rx = re.compile(pattern, re.IGNORECASE if case_insensitive else 0)
     except re.error as e:
@@ -565,11 +569,15 @@ def grep(pattern: str, path: str = ".", glob_filter: str = "**/*",
         return f"No matches for {pattern}"
     return "\n".join(hits)
 
+
 def _git_run(command: list[str], timeout: int = 60, **kwargs) -> str:
     try:
         r = subprocess.run(
             command,
-            cwd=os.getcwd(), capture_output=True, text=True, errors="replace",
+            cwd=os.getcwd(),
+            capture_output=True,
+            text=True,
+            errors="replace",
             timeout=min(timeout, 600),
         )
     except subprocess.TimeoutExpired:
@@ -583,9 +591,11 @@ def _git_run(command: list[str], timeout: int = 60, **kwargs) -> str:
         return f"exit {r.returncode}\n{out}"
     return out or "(no output)"
 
+
 def git_status(**kwargs) -> str:
     out = _git_run(["git", "status", "--porcelain"])
     return out or "(no output)"
+
 
 def git_diff(file_name: str, **kwargs) -> str:
     out = _git_run(["git", "diff", file_name])
