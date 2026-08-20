@@ -368,7 +368,7 @@ def _show_diff(old: str, new: str, max_lines: int = 40) -> None:
                     console.dim(f"  {n:>4} [ok]+ {escape(line)}", markup=True)
                     shown += 1
             if tag == "equal":
-                for n, line in enumerate(old_lines[i1:i2], i1 + 1):
+                for n, line in enumerate(new_lines[j1:j2], j1 + 1):
                     console.dim(f"  {n:>4}   {line}")
                     shown += 1
     console._print("")
@@ -418,7 +418,7 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None, **kwa
     with open(path, encoding="utf-8") as f:
         lines = f.readlines()
 
-    if not end_line or end_line > len(lines):
+    if end_line is None or end_line > len(lines):
         end_line = len(lines)
 
     if start_line > end_line:
@@ -437,8 +437,10 @@ def read_file(path: str, start_line: int = 0, end_line: int | None = None, **kwa
 def edit_file(
     path: str, old_string: str = "", new_string: str = "", replace_all: bool = False, **kwargs
 ) -> str:
-    old_string = old_string or kwargs.get("old_str", "")
-    new_string = new_string or kwargs.get("new_str", "")
+    if old_string == "":
+        old_string = kwargs.get("old_str", "")
+    if new_string == "":
+        new_string = kwargs.get("new_str", "")
     p = Path(path)
 
     if not p.exists():
@@ -498,7 +500,7 @@ def create_file(path: str | Path, content: str | None = None, **kwargs):
 
 def tree(path: Path = Path("."), prefix: str = "", **kwargs) -> str:
     entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
-    entries = [e for e in entries if not e.name.startswith(".") or e.name in TREE_IGNORE]
+    entries = [e for e in entries if not e.name.startswith(".") and e.name not in TREE_IGNORE]
     out = []
     for i, e in enumerate(entries):
         last = i == len(entries) - 1
