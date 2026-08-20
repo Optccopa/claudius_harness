@@ -19,11 +19,31 @@ dependencies = [
     "platformdirs"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "pre-commit"
+]
+
 [project.scripts]
 claudius = "claudius.cli:main"
- 
+
 [project.urls]
 Repository = "https://github.com/Optccopa/claudius_harness"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/claudius"]
+check_untyped_defs = true
