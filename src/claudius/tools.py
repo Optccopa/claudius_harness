@@ -11,7 +11,7 @@ from rich.theme import Theme
 
 from claudius.console import Console
 
-tree_ignore = [
+TREE_IGNORE = [
     "node_modules",
 ]
 theme = Theme(
@@ -498,7 +498,7 @@ def create_file(path: str | Path, content: str | None = None, **kwargs):
 
 def tree(path: Path = Path("."), prefix: str = "", **kwargs) -> str:
     entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
-    entries = [e for e in entries if not e.name.startswith(".") or e.name in tree_ignore]
+    entries = [e for e in entries if not e.name.startswith(".") or e.name in TREE_IGNORE]
     out = []
     for i, e in enumerate(entries):
         last = i == len(entries) - 1
