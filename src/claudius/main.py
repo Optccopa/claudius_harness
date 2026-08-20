@@ -75,6 +75,7 @@ def stream_response(stream, parts: list):
 def chat(first: str | None = None):
     while True:
         try:
+            user_input: str | None
             if first:
                 user_input, first = first, None
             else:
@@ -95,7 +96,7 @@ def chat(first: str | None = None):
 
         try:
             while True:
-                parts = []
+                parts: list[str] = []
                 final = None
                 try:
                     with client.client().messages.stream(
@@ -203,7 +204,8 @@ def chat(first: str | None = None):
             messages.save_exc(type(e).__name__, snapshot)
 
         except anthropic.APIStatusError as e:
-            console.error(e.body["error"]["message"])
+            error = e.body.get("error") if isinstance(e.body, dict) else None
+            console.error(error.get("message") if isinstance(error, dict) else e.message)
             messages.save_exc(type(e).__name__, snapshot)
             continue
 

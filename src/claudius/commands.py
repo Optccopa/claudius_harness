@@ -14,6 +14,10 @@ class CommandHandler:
     def _model(self, args: str):
         console.dim(f"Current model: {settings.model}")
 
+        paid: list[str] = []
+        free: list[str] = []
+        ollama: list[str] = []
+
         if args:
             settings.model = args.strip()
             console.success(f"Changed model to {args.strip()}")
@@ -28,11 +32,7 @@ class CommandHandler:
                 }
             )
 
-            paid: list[str] | None = None
-            free: list[str] | None = None
-
             if r.status_code == 200:
-                free, paid = [], []
                 for m in r.json()["data"]:
                     if m["id"].endswith(":batch"):
                         continue

@@ -3,6 +3,7 @@ import subprocess
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 import questionary as qt
 from rich.theme import Theme
@@ -21,7 +22,7 @@ theme = Theme({
 
 console = Console()
 
-tools = [
+tools: list[dict[str, Any]] = [
     {
         "type": "web_search_20260209",
         "name": "web_search",

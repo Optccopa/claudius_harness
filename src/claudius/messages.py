@@ -19,13 +19,15 @@ def _prompt_for_permission():
         return False
 
 def _claude_md() -> str:
+    global warned
+
     if settings.claude_file.exists():
-        with open(settings.claude_file) as f:
+        with open(settings.claude_file, encoding="utf-8") as f:
             claude_md = f.read()
 
         return f"## Project claude.md\n{claude_md}"
     else:
-        if warned == False:
+        if not warned:
             console.error(f"Could not find CLAUDE.md at {settings.claude_file}")
             warned = True
         return ""
