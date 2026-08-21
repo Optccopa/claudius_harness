@@ -9,7 +9,8 @@ import questionary as qt
 from rich.markup import escape
 from rich.theme import Theme
 
-from claudius.console import Console
+from claudius.console import console
+from claudius.settings import settings
 
 TREE_IGNORE = [
     "node_modules",
@@ -25,8 +26,6 @@ theme = Theme(
         "err": "#d9605a",
     }
 )
-
-console = Console()
 
 tools: list[dict[str, Any]] = [
     {"type": "web_search_20260209", "name": "web_search", "max_uses": 5},
@@ -53,12 +52,12 @@ tools: list[dict[str, Any]] = [
         "input_examples": [
             {
                 "question": "What httplib should i use?",
-                "choices": ["aiohttp", "requests (blocking)", "stdlib (blocking)"],
+                "choices": ["aiohttp (async)", "requests (blocking)", "stdlib (blocking)"],
             },
             {
                 "question": "What should i fix right now?",
                 "choices": ["Offset fov", "Bullet clipping", "StackOverflow in main"],
-                "max_answers": 3,
+                "max_answers": 1,
             },
         ],
     },
@@ -88,14 +87,6 @@ tools: list[dict[str, Any]] = [
                 },
             },
         },
-        "input_examples": [
-            {
-                "path": r"C:\Users\Copa\Documents\GitHub\ClaudiusCraft\game.py",
-                "start_line": 22,
-                "end_line": 52,
-            },
-            {"path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\main.py"},
-        ],
     },
     {
         "name": "tree",
@@ -321,12 +312,6 @@ tools: list[dict[str, Any]] = [
                 },
             },
         },
-        "input_examples": [
-            {
-                "path": r"C:\Users\Copa\Documents\GitHub\claudius_fableton\src\claudius\new_module.py",
-                "content": "This content gets written in the file",
-            }
-        ],
     },
 ]
 
@@ -342,7 +327,7 @@ def _raise_for_permission(label: str, mode: str):
 
     else:
         ok = console.confirm(
-            f"Claude wants to run `{label}`",
+            f"{settings.model} wants to run `{label}`",
             default=True,
         )
         if not ok:

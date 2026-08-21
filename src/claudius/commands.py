@@ -18,8 +18,16 @@ class CommandHandler:
         ollama: list[str] = []
 
         if args:
-            settings.model = args.strip()
-            console.success(f"Changed model to {args.strip()}")
+            args = args.strip()
+            settings.model = args
+            console.success(f"Changed model to {args}")
+
+            try:
+                settings.save_key(model=args)
+            except Exception as e:
+                console.error(f"Had an issue while trying to save the model to settings: {e}")
+
+            return
 
         try:
             r = httpx.get(
