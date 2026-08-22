@@ -1,6 +1,7 @@
 import anthropic
 import httpx
 
+from claudius.console import console
 from claudius.settings import settings
 from claudius.tools import tools
 
@@ -63,7 +64,11 @@ class Models:
             return self._ollama_models
 
     def _list_anthropic(self) -> list:
-        return [m.id for m in client.client("anthropic").models.list()]
+        try:
+            return [m.id for m in client.client("anthropic").models.list()]
+        except ValueError:
+            console.error("Failed loading anthropic models due to missing api key")
+            return []
 
     def list_anthropic(self) -> list:
         """Cached helper for _list_anthropic"""
