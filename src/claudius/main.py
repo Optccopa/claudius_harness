@@ -3,6 +3,8 @@ Main CLI assistant, run with `claudius "hello"`
 """
 
 import inspect
+import os
+from pathlib import Path
 
 import anthropic
 from rich.markdown import Markdown
@@ -172,7 +174,17 @@ def chat(first: str | None = None):
                             )
                             continue
 
-                        args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
+                        path_arg = block.input.get("path")
+                        if path_arg:
+                            try:
+                                s = Path(os.path.relpath(path_arg, settings.cwd)).as_posix()
+                            except ValueError:
+                                s = Path(path_arg).as_posix()
+                            if s.startswith("../"):
+                                s = Path(path_arg).as_posix().replace(Path.home().as_posix(), "~")
+                            block.input["path"] = s if len(s) <= 60 else "…/" + s[-(60 - 2) :]
+
+                        args = ", ".join([f"{k}={v!r}" for k, v in block.input.items()])
                         suffix = f"with {args}" if block.input else ""
                         console.bullet(f"{block.name} {suffix}")
 
@@ -211,6 +223,12 @@ def chat(first: str | None = None):
                         break
 
                 print()
+
+            except anthropic.PermissionDeniedError as e:
+                if e.status_code == 403:
+                    console.error("You may have an invalid model")
+                handler.log(e)
+                messages.save_exc(type(e).__name__, snapshot)
 
             except anthropic.APIConnectionError as e:
                 handler.log(e)
