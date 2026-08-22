@@ -62,12 +62,11 @@ class CommandHandler:
         except httpx.HTTPError as e:
             console.error(f"Failed fetching Ollama models {e}")
 
+        anthropic_models = [m.id for m in client.client("anthropic").models.list()]
+
         choices = [
             qt.Separator("---Anthropic---"),
-            *[
-                qt.Choice(title=m.display_name, value=m.id)
-                for m in client.client("anthropic").models.list()
-            ][:5],
+            *[qt.Choice(title=m, value=m) for m in anthropic_models][:5],
             qt.Separator("---Paid---"),
             *[qt.Choice(title=m, value=m) for m in paid[:5]],
             qt.Separator("---Free---"),
