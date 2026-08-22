@@ -40,7 +40,7 @@ class Models:
 
     def list_openrouter(self) -> tuple[list, list]:
         """Cached helper for _list_openrouter"""
-        if not self._openrouter_models:
+        if self._openrouter_models is None:
             self._openrouter_models = self._list_openrouter()
             return self._openrouter_models
 
@@ -55,7 +55,7 @@ class Models:
 
     def list_ollama(self) -> list:
         """Cached helper for _list_ollama"""
-        if not self._ollama_models:
+        if self._ollama_models is None:
             self._ollama_models = self._list_ollama()
             return self._ollama_models
 
@@ -67,7 +67,7 @@ class Models:
 
     def list_anthropic(self) -> list:
         """Cached helper for _list_anthropic"""
-        if not self._anthropic_models:
+        if self._anthropic_models is None:
             self._anthropic_models = self._list_anthropic()
             return self._anthropic_models
 
