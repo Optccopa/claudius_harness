@@ -93,7 +93,10 @@ def chat(first: str | None = None):
                     continue
 
                 if user_input.startswith("/"):
-                    command_handler.parse(user_input)
+                    try:
+                        command_handler.parse(user_input)
+                    except Exception as e:
+                        handler.log(e)
                     continue
             except (EOFError, KeyboardInterrupt):
                 break
