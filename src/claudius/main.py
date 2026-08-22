@@ -78,6 +78,9 @@ def chat(first: str | None = None):
                 if user_input is None:
                     break
 
+                if not user_input:
+                    continue
+
                 if user_input.startswith("/"):
                     command_handler.parse(user_input)
                     continue
