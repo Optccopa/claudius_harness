@@ -2,6 +2,7 @@ import anthropic
 import httpx
 
 from claudius.console import console
+from claudius.errorhandler import handler
 from claudius.settings import settings
 from claudius.tools import tools
 
@@ -25,6 +26,8 @@ class Models:
             },
         )
 
+        r.raise_for_status()
+
         if r.status_code == 200:
             for m in r.json()["data"]:
                 if m["id"].endswith(":batch"):
@@ -41,12 +44,17 @@ class Models:
 
     def list_openrouter(self) -> tuple[list, list]:
         """Cached helper for _list_openrouter"""
-        if self._openrouter_models is None:
-            self._openrouter_models = self._list_openrouter()
-            return self._openrouter_models
+        try:
+            if self._openrouter_models is None:
+                self._openrouter_models = self._list_openrouter()
+                return self._openrouter_models
 
-        else:
-            return self._openrouter_models
+            else:
+                return self._openrouter_models
+        except httpx.HTTPStatusError as e:
+            handler.log(e)
+            console.error("Failed loading openrouter models due to openrouter not responding")
+            return ([], [])
 
     def _list_ollama(self) -> list:
         r = httpx.get(f"{settings.ollama_base_url}/api/tags")
@@ -56,28 +64,37 @@ class Models:
 
     def list_ollama(self) -> list:
         """Cached helper for _list_ollama"""
-        if self._ollama_models is None:
-            self._ollama_models = self._list_ollama()
-            return self._ollama_models
+        try:
+            if self._ollama_models is None:
+                self._ollama_models = self._list_ollama()
+                return self._ollama_models
 
-        else:
-            return self._ollama_models
+            else:
+                return self._ollama_models
+
+        except httpx.ConnectError:
+            console.error("Failed loading ollama models due to ollama server not running")
+            return []
 
     def _list_anthropic(self) -> list:
+        return [m.id for m in client.client("anthropic").models.list()]
+
+    def list_anthropic(self) -> list:
+        """Cached helper for _list_anthropic"""
         try:
-            return [m.id for m in client.client("anthropic").models.list()]
+            if self._anthropic_models is None:
+                self._anthropic_models = self._list_anthropic()
+                return self._anthropic_models
+
+            else:
+                return self._anthropic_models
         except ValueError:
             console.error("Failed loading anthropic models due to missing api key")
             return []
 
-    def list_anthropic(self) -> list:
-        """Cached helper for _list_anthropic"""
-        if self._anthropic_models is None:
-            self._anthropic_models = self._list_anthropic()
-            return self._anthropic_models
-
-        else:
-            return self._anthropic_models
+        except anthropic.APIError:
+            console.error("Failed loading anthropic models due to invalid api key")
+            return []
 
     def list_recents(self) -> list:
         return settings.load_key("recentModels") or []

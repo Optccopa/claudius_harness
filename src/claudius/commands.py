@@ -24,18 +24,59 @@ class CommandHandler:
 
             return
 
-        choices = [
-            qt.Separator("---Anthropic---"),
-            *[qt.Choice(title=m, value=m) for m in models.list_anthropic()][:5],
-            qt.Separator("---Paid---"),
-            *[qt.Choice(title=m, value=m) for m in models.list_openrouter()[0][:5]],
-            qt.Separator("---Free---"),
-            *[qt.Choice(title=m, value=m) for m in models.list_openrouter()[1][:5]],
-            qt.Separator("---Ollama---"),
-            *[qt.Choice(title=m, value=m) for m in models.list_ollama()[:5]],
-            qt.Separator("---Recents---"),
-            *[qt.Choice(title=m, value=m) for m in models.list_recents()[:5]],
-        ]
+        choices: list = []
+
+        anthropic_models = models.list_anthropic()
+
+        openrouter_models = models.list_openrouter()
+
+        ollama_models = models.list_ollama()
+
+        recent_models = models.list_recents()
+
+        if anthropic_models:
+            choices.extend(
+                [
+                    qt.Separator("---Anthropic---"),
+                    *[qt.Choice(title=m, value=m) for m in anthropic_models[:5]],
+                ]
+            )
+
+        if openrouter_models[0]:  # paid
+            choices.extend(
+                [
+                    qt.Separator("---Paid---"),
+                    *[qt.Choice(title=m, value=m) for m in openrouter_models[0][:5]],
+                ]
+            )
+
+        if openrouter_models[1]:  # free
+            choices.extend(
+                [
+                    qt.Separator("---Free---"),
+                    *[qt.Choice(title=m, value=m) for m in openrouter_models[1][:5]],
+                ]
+            )
+
+        if ollama_models:
+            choices.extend(
+                [
+                    qt.Separator("---Ollama---"),
+                    *[qt.Choice(title=m, value=m) for m in ollama_models[:5]],
+                ]
+            )
+
+        if recent_models:
+            choices.extend(
+                [
+                    qt.Separator("---Recents---"),
+                    *[qt.Choice(title=m, value=m) for m in models.list_recents()[:5]],
+                ]
+            )
+
+        if not choices:
+            console.error("Could not load any model choices.")
+            return
 
         model = console.select("Select a model", choices=choices)
 
@@ -68,11 +109,8 @@ class CommandHandler:
         messages.load(path)
         console.success("Loaded messages")
 
-    def _env(self):
-        console.info(f".env file: {settings.env_file.resolve()}")
-
-    def _settings(self):
-        console.info(f"settings.json file: {settings.settings_file.resolve()}")
+    def _dir(self):
+        console.info(f"claudius directory: {settings.claudius_dir.resolve()}")
 
     def parse(self, user_input: str = "/") -> None:
         cmd, _, args = user_input.removeprefix("/").partition(" ")
@@ -91,11 +129,8 @@ class CommandHandler:
         elif cmd == "mode":
             self._mode(args=args)
 
-        elif cmd == "env":
-            self._env()
-
-        elif cmd == "settings":
-            self._settings()
+        elif cmd == "dir":
+            self._dir()
 
         else:
             console.error(f"Command not found: {cmd}")
