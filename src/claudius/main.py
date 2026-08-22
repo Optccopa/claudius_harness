@@ -27,6 +27,8 @@ SILENT = [
     "tree",
 ]
 
+MAX_RECENT_MODELS = 5
+
 stats = {"session_input_tokens": 0, "session_output_tokens": 0}
 
 named_tool_functions = {
@@ -117,16 +119,13 @@ def chat(first: str | None = None):
                         pass
 
                     # add used model to recent models
-                    current: list = settings.load_key("recentModels")
-                    if current:
-                        if settings.model in current:
-                            current.remove(settings.model)
-                            current.insert(0, settings.model)
+                    recent: list = settings.load_key("recentModels") or []
 
-                        else:
-                            current.insert(0, settings.model)
-                    else:
-                        settings.save_key(recentModels=[settings.model])
+                    if settings.model in recent:
+                        recent.remove(settings.model)
+
+                    recent.insert(0, settings.model)
+                    settings.save_key(recentModels=recent[:MAX_RECENT_MODELS])
 
                     if final is None:
                         partial = "".join(parts).strip()
