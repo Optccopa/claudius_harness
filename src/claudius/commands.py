@@ -1,9 +1,8 @@
 from pathlib import Path
 
-import httpx
 import questionary as qt
 
-from claudius.clients import client
+from claudius.clients import models
 from claudius.console import console
 from claudius.messages import messages
 from claudius.settings import settings
@@ -12,10 +11,6 @@ from claudius.settings import settings
 class CommandHandler:
     def _model(self, args: str):
         console.dim(f"Current model: {settings.model}")
-
-        paid: list[str] = []
-        free: list[str] = []
-        ollama: list[str] = []
 
         if args:
             args = args.strip()
@@ -29,50 +24,15 @@ class CommandHandler:
 
             return
 
-        try:
-            r = httpx.get(
-                f"{settings.openrouter_base_url}/v1/models",
-                params={
-                    "sort": "intelligence-high-to-low",
-                    "min_tool_success_rate": "0.01",
-                    "supported_parameters": "tools",
-                },
-            )
-
-            if r.status_code == 200:
-                for m in r.json()["data"]:
-                    if m["id"].endswith(":batch"):
-                        continue
-
-                    p = m.get("pricing", {})
-                    is_free = not any(
-                        float(p.get(k) or 0) for k in ("prompt", "completion", "request")
-                    )
-                    if "claude" in m["id"]:
-                        continue  # Claude models already listed on anthropic endpoint
-
-                    (free if is_free else paid).append(m["id"])
-        except httpx.HTTPError as e:
-            console.error(f"Failed fetching OpenRouter models {e}")
-
-        try:
-            r = httpx.get(f"{settings.ollama_base_url}/api/tags")
-            if r.status_code == 200:
-                ollama = [m["name"] for m in r.json()["models"] if "tools" in m["capabilities"]]
-        except httpx.HTTPError as e:
-            console.error(f"Failed fetching Ollama models {e}")
-
-        anthropic_models = [m.id for m in client.client("anthropic").models.list()]
-
         choices = [
             qt.Separator("---Anthropic---"),
-            *[qt.Choice(title=m, value=m) for m in anthropic_models][:5],
+            *[qt.Choice(title=m, value=m) for m in models.list_anthropic()][:5],
             qt.Separator("---Paid---"),
-            *[qt.Choice(title=m, value=m) for m in paid[:5]],
+            *[qt.Choice(title=m, value=m) for m in models.list_openrouter()[0][:5]],
             qt.Separator("---Free---"),
-            *[qt.Choice(title=m, value=m) for m in free[:5]],
+            *[qt.Choice(title=m, value=m) for m in models.list_openrouter()[1][:5]],
             qt.Separator("---Ollama---"),
-            *[qt.Choice(title=m, value=m) for m in ollama[:5]],
+            *[qt.Choice(title=m, value=m) for m in models.list_ollama()[:5]],
         ]
 
         model = console.select("Select a model", choices=choices)

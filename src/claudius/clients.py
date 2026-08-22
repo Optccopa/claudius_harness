@@ -1,7 +1,78 @@
 import anthropic
+import httpx
 
 from claudius.settings import settings
 from claudius.tools import tools
+
+
+class Models:
+    def __init__(self):
+        self._ollama_models: list | None = None
+        self._openrouter_models: tuple[list, list] | None = None
+        self._anthropic_models: list | None = None
+
+    def _list_openrouter(self) -> tuple[list, list]:
+        """returns: paid, free"""
+        paid: list[str] = []
+        free: list[str] = []
+        r = httpx.get(
+            f"{settings.openrouter_base_url}/v1/models",
+            params={
+                "sort": "intelligence-high-to-low",
+                "min_tool_success_rate": "0.01",
+                "supported_parameters": "tools",
+            },
+        )
+
+        if r.status_code == 200:
+            for m in r.json()["data"]:
+                if m["id"].endswith(":batch"):
+                    continue
+
+                p = m.get("pricing", {})
+                is_free = not any(float(p.get(k) or 0) for k in ("prompt", "completion", "request"))
+                if "claude" in m["id"]:
+                    continue  # Claude models already listed on anthropic endpoint
+
+                (free if is_free else paid).append(m["id"])
+
+        return paid, free
+
+    def list_openrouter(self) -> tuple[list, list]:
+        """Cached helper for _list_openrouter"""
+        if not self._openrouter_models:
+            self._openrouter_models = self._list_openrouter()
+            return self._openrouter_models
+
+        else:
+            return self._openrouter_models
+
+    def _list_ollama(self) -> list:
+        r = httpx.get(f"{settings.ollama_base_url}/api/tags")
+        if r.status_code == 200:
+            return [m["name"] for m in r.json()["models"] if "tools" in m["capabilities"]]
+        return []
+
+    def list_ollama(self) -> list:
+        """Cached helper for _list_ollama"""
+        if not self._ollama_models:
+            self._ollama_models = self._list_ollama()
+            return self._ollama_models
+
+        else:
+            return self._ollama_models
+
+    def _list_anthropic(self) -> list:
+        return [m.id for m in client.client("anthropic").models.list()]
+
+    def list_anthropic(self) -> list:
+        """Cached helper for _list_anthropic"""
+        if not self._anthropic_models:
+            self._anthropic_models = self._list_anthropic()
+            return self._anthropic_models
+
+        else:
+            return self._anthropic_models
 
 
 class Anthropic(anthropic.Anthropic):
@@ -102,3 +173,4 @@ class LazyClient:
 
 
 client = LazyClient()
+models = Models()
