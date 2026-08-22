@@ -5,6 +5,8 @@ import subprocess
 import questionary as qt
 from rich.console import Console as RichConsole
 from rich.markdown import Markdown
+from rich.table import Table
+from rich.text import Text
 from rich.theme import Theme
 
 COLORS = {
@@ -64,6 +66,13 @@ class Console:
             return qt.confirm(prompt, default=default, style=PROMPT_STYLE).unsafe_ask()
         except (KeyboardInterrupt, EOFError):
             return False
+
+    def bullet(self, text: str, glyph: str = "▪", style: str = "dim", indent: int = 2) -> None:
+        grid = Table.grid(padding=(0, 1))
+        grid.add_column(width=indent + len(glyph), no_wrap=True)
+        grid.add_column(overflow="fold")
+        grid.add_row(Text(" " * indent + glyph, style=style), Text(text, style=style))
+        self._rich.print(grid)
 
     def renderable(self, msg, **kwargs):
         self._rich.print(msg, **kwargs)

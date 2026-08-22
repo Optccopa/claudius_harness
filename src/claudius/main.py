@@ -139,12 +139,12 @@ def chat(first: str | None = None):
 
                         if t == "server_tool_use":
                             if block.name == "web_search":
-                                console.dim(f"  ▪ search  {block.input.get('query', '')}")
+                                console.bullet(f"search  {block.input.get('query', '')}")
                             continue
 
                         if t == "web_search_tool_result":
                             n = len(block.content) if isinstance(block.content, list) else 0
-                            console.dim(f"    ↳ {n} results")
+                            console.bullet(f"{n} results", glyph="↳")
                             continue
 
                     if final.stop_reason != "tool_use":
@@ -174,7 +174,7 @@ def chat(first: str | None = None):
 
                         args = ", ".join(f"{k}={v!r}" for k, v in block.input.items())
                         suffix = f"with {args}" if block.input else ""
-                        console.dim(f"  ▪ {block.name} {suffix}")
+                        console.bullet(f"{block.name} {suffix}")
 
                         try:
                             output = named_tool_functions[block.name](
