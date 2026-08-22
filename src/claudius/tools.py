@@ -7,7 +7,6 @@ from typing import Any
 
 import questionary as qt
 from rich.markup import escape
-from rich.theme import Theme
 
 from claudius.console import PROMPT_STYLE, console
 from claudius.settings import settings
@@ -15,17 +14,6 @@ from claudius.settings import settings
 TREE_IGNORE = [
     "node_modules",
 ]
-theme = Theme(
-    {
-        "body": "#e8e3d8",
-        "accent": "#D97757",
-        "dim": "#8a8175",
-        "user": "#b9f2ff",
-        "ok": "#7fb069",
-        "warn": "#d9a75f",
-        "err": "#d9605a",
-    }
-)
 
 tools: list[dict[str, Any]] = [
     {"type": "web_search_20260209", "name": "web_search", "max_uses": 5},

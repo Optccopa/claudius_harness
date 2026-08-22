@@ -23,7 +23,6 @@ SILENT = [
     "create_file",
     "read_file",
     "edit_file",
-    "ask_user_question",
     "git_diff",
     "tree",
 ]
