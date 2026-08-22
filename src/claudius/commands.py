@@ -33,6 +33,8 @@ class CommandHandler:
             *[qt.Choice(title=m, value=m) for m in models.list_openrouter()[1][:5]],
             qt.Separator("---Ollama---"),
             *[qt.Choice(title=m, value=m) for m in models.list_ollama()[:5]],
+            qt.Separator("---Recents---"),
+            *[qt.Choice(title=m, value=m) for m in models.list_recents()[:5]],
         ]
 
         model = console.select("Select a model", choices=choices)

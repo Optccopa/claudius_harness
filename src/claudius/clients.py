@@ -74,6 +74,9 @@ class Models:
         else:
             return self._anthropic_models
 
+    def list_recents(self) -> list:
+        return settings.load_key("recentModels") or []
+
 
 class Anthropic(anthropic.Anthropic):
     def __init__(self):

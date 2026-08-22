@@ -80,6 +80,13 @@ class Settings:
         with open(self.settings_file, "w") as f:
             f.write(json.dumps(before | kwargs, indent=4))
 
+    def load_key(self, key: str):
+        """Returns value or None"""
+        with open(self.settings_file) as f:
+            return json.loads(f.read()).get(key)
+
+        return None
+
     def load(self) -> dict:
         with open(self.settings_file) as f:
             return json.loads(f.read())

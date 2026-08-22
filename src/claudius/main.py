@@ -117,6 +117,18 @@ def chat(first: str | None = None):
                     except KeyboardInterrupt:
                         pass
 
+                    # add used model to recent models
+                    current: list = settings.load_key("recentModels")
+                    if current:
+                        if settings.model in current:
+                            current.remove(settings.model)
+                            current.insert(0, settings.model)
+
+                        else:
+                            current.insert(0, settings.model)
+                    else:
+                        settings.save_key(recentModels=[settings.model])
+
                     if final is None:
                         partial = "".join(parts).strip()
                         if partial:
