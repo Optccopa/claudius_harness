@@ -32,7 +32,7 @@ class Settings:
         self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
-        self.model = self.load()["model"]
+        self.model: str = self.load()["model"]
         self.mode = "manual"
 
         self.system_file = Path(__file__).resolve().parent / "SYSTEM.md"
