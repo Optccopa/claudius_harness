@@ -99,7 +99,12 @@ class CommandHandler:
         console.success("Saved messages")
 
     def _load(self, args: str | None):
-        messages.load(Path(f"{settings.chats_dir}/chat-{args}.json"))
+        path = Path(f"{settings.chats_dir}/chat-{args}.json")
+        if not path.exists():
+            console.error(f"No such chat: {path.resolve()}")
+            return
+
+        messages.load(path)
         console.success("Loaded messages")
 
     def _env(self):

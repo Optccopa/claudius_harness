@@ -16,7 +16,7 @@ from claudius.messages import messages
 from claudius.settings import settings
 
 # If a tool is in this dict it doesnt print args to the tool
-SILENT = ["create_file", "read_file", "ask_user_question", "git_diff", "tree"]
+SILENT = ["create_file", "read_file", "edit_file", "ask_user_question", "git_diff", "tree"]
 
 stats = {"session_input_tokens": 0, "session_output_tokens": 0}
 
