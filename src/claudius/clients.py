@@ -51,7 +51,7 @@ class Models:
 
             else:
                 return self._openrouter_models
-        except httpx.HTTPStatusError as e:
+        except httpx.ConnectError as e:
             handler.log(e)
             console.error("Failed loading openrouter models due to openrouter not responding")
             return ([], [])
