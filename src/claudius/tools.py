@@ -9,7 +9,7 @@ import questionary as qt
 from rich.markup import escape
 from rich.theme import Theme
 
-from claudius.console import console
+from claudius.console import PROMPT_STYLE, console
 from claudius.settings import settings
 
 TREE_IGNORE = [
@@ -365,6 +365,7 @@ def ask_user_question(question: str, choices: list, max_answers: int = 1, **kwar
         question,
         choices,
         validate=lambda sel: True if len(sel) <= max_answers else f"Pick at most {max_answers}",
+        style=PROMPT_STYLE,
     ).ask()
 
     if not response:

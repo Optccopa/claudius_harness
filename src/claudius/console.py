@@ -18,6 +18,21 @@ COLORS = {
     "markdown.code": "#D97757",
 }
 
+PROMPT_STYLE = qt.Style(
+    [
+        ("qmark", f"fg:{COLORS['accent']} bold"),
+        ("question", f"fg:{COLORS['body']}"),
+        ("answer", f"fg:{COLORS['user']}"),
+        ("pointer", f"fg:{COLORS['accent']} bold"),
+        ("highlighted", f"fg:{COLORS['accent']}"),
+        ("selected", f"fg:{COLORS['ok']}"),
+        ("separator", f"fg:{COLORS['dim']}"),
+        ("instruction", f"fg:{COLORS['dim']} italic"),
+        ("text", f"fg:{COLORS['body']}"),
+        ("disabled", f"fg:{COLORS['dim']} italic"),
+    ]
+)
+
 
 class Console:
     def __init__(self):
@@ -34,19 +49,19 @@ class Console:
 
     def input(self, prompt: str = "you:") -> str | None:
         try:
-            return qt.text(prompt).unsafe_ask().strip()
+            return qt.text(prompt, style=PROMPT_STYLE).unsafe_ask().strip()
         except (KeyboardInterrupt, EOFError):
             return None
 
     def select(self, prompt: str, choices: list):
         try:
-            return qt.select(prompt, choices=choices).unsafe_ask()
+            return qt.select(prompt, choices=choices, style=PROMPT_STYLE).unsafe_ask()
         except (KeyboardInterrupt, EOFError):
             return None
 
     def confirm(self, prompt: str, default: bool = True) -> bool:
         try:
-            return qt.confirm(prompt, default=default).unsafe_ask()
+            return qt.confirm(prompt, default=default, style=PROMPT_STYLE).unsafe_ask()
         except (KeyboardInterrupt, EOFError):
             return False
 

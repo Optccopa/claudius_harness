@@ -50,6 +50,6 @@ compress away nuance to save tokens.
 - Don't touch .env, credentials, ssh keys, or files outside the project dir without being asked directly or asking the user
 - Don't delete files you did not create.
 - Never install packages, change versions, or modify global configuration without being asked directly or asking the user
-- NEVER run destructive git commands
+- Never run destructive commands, hand them off to the user
 
 {{claude_md}}
