@@ -1,3 +1,5 @@
+from typing import Any
+
 import anthropic
 import httpx
 
@@ -6,12 +8,15 @@ from claudius.errorhandler import handler
 from claudius.settings import settings
 from claudius.tools import tools
 
+DEFAULT_INFO: dict[str, Any] = {"context_length": 256000, "input_cost": 0.0, "output_cost": 0.0}
+
 
 class Models:
     def __init__(self):
         self._ollama_models: list | None = None
         self._openrouter_models: tuple[list, list] | None = None
         self._anthropic_models: list | None = None
+        self._info: dict[str, dict[str, Any]] = {}
 
     def _list_openrouter(self) -> tuple[list, list]:
         """returns: paid, free"""
@@ -30,10 +35,18 @@ class Models:
 
         if r.status_code == 200:
             for m in r.json()["data"]:
+                p = m.get("pricing", {})
+                self._info[m["id"]] = {
+                    "context_length": m.get("context_length"),
+                    "input_cost": float(p["prompt"]) * 1_000_000 if p.get("prompt") else None,
+                    "output_cost": float(p["completion"]) * 1_000_000
+                    if p.get("completion")
+                    else None,
+                }
+
                 if m["id"].endswith(":batch"):
                     continue
 
-                p = m.get("pricing", {})
                 is_free = not any(float(p.get(k) or 0) for k in ("prompt", "completion", "request"))
                 if "claude" in m["id"]:
                     continue  # Claude models already listed on anthropic endpoint
@@ -98,6 +111,44 @@ class Models:
 
     def list_recents(self) -> list:
         return settings.load_key("recentModels") or []
+
+    def _info_anthropic(self) -> dict:
+        m = client.client("anthropic").models.retrieve(settings.model)
+        return {"context_length": m.max_input_tokens, "input_cost": None, "output_cost": None}
+
+    def _info_openrouter(self) -> dict:
+        self.list_openrouter()
+        return self._info.get(settings.model) or {}
+
+    def _info_ollama(self) -> dict:
+        r = httpx.post(f"{settings.ollama_base_url}/api/show", json={"model": settings.model})
+        if r.status_code != 200:
+            return {}
+
+        info = r.json().get("model_info", {})
+        n = next((v for k, v in info.items() if k.endswith(".context_length")), None)
+        return {"context_length": n, "input_cost": 0.0, "output_cost": 0.0}  # runs locally
+
+    def model_info(self) -> dict[str, Any]:
+        """Cached info for the active model: context_length, input_cost, output_cost"""
+        try:
+            if settings.model not in self._info:
+                src = client.client()
+
+                if isinstance(src, Ollama):
+                    info = self._info_ollama()
+                elif isinstance(src, OpenRouter):
+                    info = self._info_openrouter()
+                else:
+                    info = self._info_anthropic()
+
+                if info:
+                    self._info[settings.model] = info
+        except (httpx.ConnectError, anthropic.APIError, ValueError):
+            console.error("Failed fetching model info, look above, using defaults")
+            return DEFAULT_INFO
+
+        return self._info.get(settings.model) or DEFAULT_INFO
 
 
 class Anthropic(anthropic.Anthropic):

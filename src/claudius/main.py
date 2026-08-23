@@ -13,7 +13,7 @@ from rich.table import Table
 from rich.text import Text
 
 from claudius import tools
-from claudius.clients import client
+from claudius.clients import client, models
 from claudius.commands import handler as command_handler
 from claudius.console import console
 from claudius.errorhandler import handler
@@ -32,7 +32,7 @@ SILENT = [
 
 MAX_RECENT_MODELS = 5
 
-stats = {"session_input_tokens": 0, "session_output_tokens": 0}
+session_tokens: dict[str, int] = {"session_input_tokens": 0, "session_output_tokens": 0}
 
 named_tool_functions = {
     name: fn
@@ -267,19 +267,21 @@ def chat(first: str | None = None):
             if final:
                 u = final.usage
 
-                stats["session_input_tokens"] += u.input_tokens
-                stats["session_output_tokens"] += u.output_tokens
+                session_tokens["session_input_tokens"] += u.input_tokens
+                session_tokens["session_output_tokens"] += u.output_tokens
+
+                info = models.model_info()
 
                 cost = (
-                    stats["session_input_tokens"] * 2 + stats["session_output_tokens"] * 10
+                    session_tokens["session_input_tokens"] * info["input_cost"]
+                    + session_tokens["session_output_tokens"] * info["output_cost"]
                 ) / 1_000_000
 
                 tokens = 0
                 tokens += u.input_tokens or 0
                 tokens += u.output_tokens or 0
 
-                # TODO: Change this to use the real context window size instead of being hardcoded
-                total = 256000
+                total = info["context_length"]
                 frac = tokens / total if total else 0.0
                 style = "green" if frac < 0.60 else "yellow" if frac < 0.85 else "red"
                 grid = Table.grid(padding=(0, 1))
@@ -296,7 +298,14 @@ def chat(first: str | None = None):
                     ),
                     Text.assemble((f"{tokens:,}/{total:,}", style)),
                 )
-                console.dim(f"{settings.model} · {settings.mode} · session: ${cost:.3f} ($2, $10)")
+
+                pricing = (
+                    f"${cost:.2f} (${info['input_cost']:.2f}, ${info['output_cost']:.2f}"
+                    if info["input_cost"] > 0 and info["output_cost"] > 0
+                    else "free"
+                )
+
+                console.dim(f"{settings.model} · {settings.mode} · session: {pricing})")
                 console.renderable(grid)
         except KeyboardInterrupt:
             continue
