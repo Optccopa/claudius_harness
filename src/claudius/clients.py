@@ -42,6 +42,15 @@ class Models:
 
         return paid, free
 
+    def _list_ollama(self) -> list:
+        r = httpx.get(f"{settings.ollama_base_url}/api/tags")
+        if r.status_code == 200:
+            return [m["name"] for m in r.json()["models"] if "tools" in m["capabilities"]]
+        return []
+
+    def _list_anthropic(self) -> list:
+        return [m.id for m in client.client("anthropic").models.list()]
+
     def list_openrouter(self) -> tuple[list, list]:
         """Cached helper for _list_openrouter"""
         try:
@@ -56,12 +65,6 @@ class Models:
             console.error("Failed loading openrouter models due to openrouter not responding")
             return ([], [])
 
-    def _list_ollama(self) -> list:
-        r = httpx.get(f"{settings.ollama_base_url}/api/tags")
-        if r.status_code == 200:
-            return [m["name"] for m in r.json()["models"] if "tools" in m["capabilities"]]
-        return []
-
     def list_ollama(self) -> list:
         """Cached helper for _list_ollama"""
         try:
@@ -75,9 +78,6 @@ class Models:
         except httpx.ConnectError:
             console.error("Failed loading ollama models due to ollama server not running")
             return []
-
-    def _list_anthropic(self) -> list:
-        return [m.id for m in client.client("anthropic").models.list()]
 
     def list_anthropic(self) -> list:
         """Cached helper for _list_anthropic"""

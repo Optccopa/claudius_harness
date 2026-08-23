@@ -8,6 +8,9 @@ from pathlib import Path
 
 import anthropic
 from rich.markdown import Markdown
+from rich.progress_bar import ProgressBar
+from rich.table import Table
+from rich.text import Text
 
 from claudius import tools
 from claudius.clients import client
@@ -271,6 +274,29 @@ def chat(first: str | None = None):
                     stats["session_input_tokens"] * 2 + stats["session_output_tokens"] * 10
                 ) / 1_000_000
 
+                tokens = 0
+                tokens += u.input_tokens or 0
+                tokens += u.output_tokens or 0
+
+                # TODO: Change this to use the real context window size instead of being hardcoded
+                total = 256000
+                frac = tokens / total if total else 0.0
+                style = "green" if frac < 0.60 else "yellow" if frac < 0.85 else "red"
+                grid = Table.grid(padding=(0, 1))
+                grid.add_column(width=28)
+                grid.add_column(justify="right")
+                grid.add_row(
+                    ProgressBar(
+                        total=total,
+                        completed=tokens,
+                        width=28,
+                        complete_style=style,
+                        finished_style=style,
+                        style="grey23",
+                    ),
+                    Text.assemble((f"{tokens:,}/{total:,}", style)),
+                )
                 console.dim(f"{settings.model} · {settings.mode} · session: ${cost:.3f} ($2, $10)")
+                console.renderable(grid)
         except KeyboardInterrupt:
             continue
