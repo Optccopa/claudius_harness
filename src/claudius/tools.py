@@ -15,6 +15,15 @@ TREE_IGNORE = [
     "node_modules",
 ]
 
+LS_IGNORE = {
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    ".mypy_cache",
+    ".ruff_cache",
+}
+
 tools: list[dict[str, Any]] = [
     {"type": "web_search_20260209", "name": "web_search", "max_uses": 5},
     {
@@ -77,16 +86,30 @@ tools: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "tree",
+        "name": "ls",
         "description": (
-            "Recursively list contents of a directory as a tree\n"
-            "Use as an alternative to ls and any time you need to list files"
+            "- List directory contents as flat relative paths, one entry per line\n"
+            "- This tool has no permission requirements\n"
+            "- Directories get a trailing slash; set recurse=true to expand them\n"
+            "- Ignores .git, node_modules, __pycache__, .venv and similar cache dirs\n"
+            "- Capped at max_entries lines so huge directories stay cheap to read"
         ),
         "input_schema": {
             "type": "object",
             "required": [],
             "properties": {
-                "path": {"type": "string", "description": "Path to list, default: project dir"}
+                "path": {
+                    "type": "string",
+                    "description": "The directory to list. If not specified, the current working directory will be used",
+                },
+                "recurse": {
+                    "type": "boolean",
+                    "description": "Expand subdirectories. Default false.",
+                },
+                "max_entries": {
+                    "type": "integer",
+                    "description": "Max number of lines returned before truncating. Default 200.",
+                },
             },
         },
     },
@@ -472,17 +495,35 @@ def create_file(path: str | Path, content: str | None = None, **kwargs):
     return f"Created file at {path.resolve()}"
 
 
-def tree(path: Path = Path("."), prefix: str = "", **kwargs) -> str:
-    entries = sorted(Path(path).iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
-    entries = [e for e in entries if not e.name.startswith(".") and e.name not in TREE_IGNORE]
-    out = []
-    for i, e in enumerate(entries):
-        last = i == len(entries) - 1
-        branch = "\\ " if last else "|- "
-        out.append(f"{prefix}{branch}{e.name}")
-        if e.is_dir():
-            out.append(tree(e, prefix + ("    " if last else "|   ")))
-    return "\n".join(filter(None, out))
+def ls(path: str | Path = Path(), recurse: bool = False, max_entries: int = 200, **kwargs) -> str:
+    root = Path(path)
+    if not root.is_dir():
+        return f"{root} is not a directory."
+
+    lines: list[str] = []
+
+    def walk(d: Path) -> None:
+        try:
+            entries = sorted(d.iterdir(), key=lambda p: (p.is_dir(), p.name.lower()))
+        except PermissionError:
+            lines.append(f"{d.relative_to(root).as_posix()}/  [permission denied]")
+            return
+
+        for e in entries:
+            if len(lines) >= max_entries:
+                return
+            rel = e.relative_to(root).as_posix()
+            if not e.is_dir():
+                lines.append(rel)
+            elif e.name in LS_IGNORE or e.is_symlink() or not recurse:
+                lines.append(f"{rel}/  [not expanded]")
+            else:
+                lines.append(f"{rel}/")
+                walk(e)
+
+    walk(root)
+    truncated = "\n[truncated]" if len(lines) >= max_entries else ""
+    return f"{root.resolve()}\n" + "\n".join(lines) + truncated
 
 
 def glob(pattern: str, path: str = str(Path().resolve()), **kwargs) -> str:
