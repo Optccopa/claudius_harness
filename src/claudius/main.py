@@ -27,7 +27,9 @@ SILENT = [
     "read_file",
     "edit_file",
     "git_diff",
-    "tree",
+    "ls",
+    "grep",
+    "glob",
 ]
 
 MAX_RECENT_MODELS = 5
