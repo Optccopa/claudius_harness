@@ -177,7 +177,7 @@ class OpenRouter(anthropic.Anthropic):
             max_retries=0,
             http_client=http_client(),
             default_headers={
-                "HTTP-Referer": "https://github.com/optccopa/neptune",
+                "HTTP-Referer": "https://github.com/Optccopa/neptune",
                 "X-OpenRouter-Title": "Neptune",
                 "X-OpenRouter-Categories": "coding-agent,productivity",
             },
