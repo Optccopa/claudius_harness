@@ -2,6 +2,7 @@ import difflib
 import os
 import re
 import subprocess
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
@@ -11,10 +12,6 @@ from rich.markup import escape
 from neptune.console import PROMPT_STYLE, console
 from neptune.settings import settings
 
-TREE_IGNORE = [
-    "node_modules",
-]
-
 LS_IGNORE = {
     ".git",
     "node_modules",
@@ -23,6 +20,27 @@ LS_IGNORE = {
     ".mypy_cache",
     ".ruff_cache",
 }
+
+# Directories that dont get walked, speeds up grep / glob
+# uses everything also listed in LS_IGNORE
+WALK_IGNORE = LS_IGNORE | {
+    "venv",
+    "dist",
+    "build",
+    "bin",
+    "obj",
+    "packages",
+    "target",
+    "vendor",
+    ".next",
+    ".tox",
+    ".pytest_cache",
+    ".gradle",
+    ".idea",
+}
+
+# Files above this are assumed to be data, not source code
+MAX_GREP_BYTES = 2_000_000
 
 tools: list[dict[str, Any]] = [
     {"type": "web_search_20260209", "name": "web_search", "max_uses": 5},
@@ -174,17 +192,18 @@ tools: list[dict[str, Any]] = [
                 "path": {
                     "type": "string",
                     "description": (
-                        "The directory to search in. If not specified, the current working "
-                        "directory will be used. IMPORTANT: Omit this field to use the default "
-                        'directory. DO NOT enter "undefined" or "null" - simply omit it for '
-                        "the default behavior."
+                        "The directory to search in, or a single file to search. IMPORTANT: "
+                        "Omit this field to use the default directory. DO NOT enter "
+                        '"undefined" or "null" - omit it for the default behavior.'
                     ),
                 },
                 "glob_filter": {
                     "type": "string",
                     "description": (
                         'Glob pattern limiting which files are searched, e.g. "**/*.py". '
-                        "Defaults to every file."
+                        'Must start with "**/" to search subdirectories - a bare "*.py" '
+                        "only matches files sitting directly in path. Defaults to every file. "
+                        "Ignored when path is a single file."
                     ),
                 },
                 "case_insensitive": {
@@ -526,12 +545,26 @@ def ls(path: str | Path = Path(), recurse: bool = False, max_entries: int = 200,
     return f"{root.resolve()}\n" + "\n".join(lines) + truncated
 
 
+def _iter_files(root: Path, pattern: str):
+    if pattern.startswith("**/") and "/" not in pattern[3:]:
+        name = pattern[3:]
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if d not in WALK_IGNORE]
+            for fn in filenames:
+                if fnmatch(fn, name):
+                    yield Path(dirpath) / fn
+    else:
+        for p in root.glob(pattern):
+            if p.is_file():
+                yield p
+
+
 def glob(pattern: str, path: str = str(Path().resolve()), **kwargs) -> str:
     root = Path(path)
     if not root.is_dir():
         return f"Not a directory: {path}"
 
-    hits = [p for p in root.glob(pattern) if p.is_file()]
+    hits = list(_iter_files(root, pattern))
     hits.sort(key=lambda p: p.stat().st_mtime, reverse=True)
 
     if not hits:
@@ -557,13 +590,31 @@ def grep(
     except re.error as e:
         return f"Bad regex: {e}"
 
-    hits, count = [], 0
-    for f in Path(path).glob(glob_filter):
-        if not f.is_file() or any(p.startswith(".") for p in f.parts):
+    root = Path(path)
+    if not root.exists():
+        return f"No such path: {path}"
+
+    single = root.is_file()
+    candidates = [root] if single else _iter_files(root, glob_filter)
+
+    hits, count, scanned = [], 0, 0
+    for f in candidates:
+        if not single and any(p.startswith(".") for p in f.parts):
             continue
+        scanned += 1
         try:
-            lines = f.read_text(encoding="utf-8", errors="strict").splitlines()
-        except (UnicodeDecodeError, OSError):
+            if f.stat().st_size > MAX_GREP_BYTES:
+                continue
+            raw = f.read_bytes()
+        except OSError:
+            continue
+
+        if b"\0" in raw[:8192]:  # binary, skip before taking time to decode
+            continue
+
+        try:
+            lines = raw.decode("utf-8").splitlines()
+        except UnicodeDecodeError:
             continue
 
         matched = [i for i, line in enumerate(lines) if rx.search(line)]
@@ -587,6 +638,10 @@ def grep(
             break
 
     if not hits:
+        if not scanned:
+            # Distinguish "searched nothing" from "searched and found nothing"
+            hint = f" Did you mean '**/{glob_filter}'?" if "/" not in glob_filter else ""
+            return f"glob_filter {glob_filter!r} matched no files under {path}.{hint}"
         return f"No matches for {pattern}"
     return "\n".join(hits)
 

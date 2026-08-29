@@ -85,8 +85,6 @@ class Settings:
         with open(self.settings_file) as f:
             return json.loads(f.read()).get(key)
 
-        return None
-
     def load(self) -> dict:
         with open(self.settings_file) as f:
             return json.loads(f.read())
