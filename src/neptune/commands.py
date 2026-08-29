@@ -118,7 +118,7 @@ class CommandHandler:
         args = args.strip()
 
         if cmd == "model":
-            return self._model(args=args)
+            self._model(args=args)
 
         elif cmd == "save":
             self._save(args=args)
