@@ -281,9 +281,9 @@ def chat(first: str | None = None):
                     + session_tokens["session_output_tokens"] * info["output_cost"]
                 ) / 1_000_000
 
-                tokens = 0
-                tokens += u.input_tokens or 0
-                tokens += u.output_tokens or 0
+                tokens = (
+                    session_tokens["session_input_tokens"] + session_tokens["session_output_tokens"]
+                )
 
                 total = info["context_length"]
                 frac = tokens / total if total else 0.0
@@ -304,12 +304,12 @@ def chat(first: str | None = None):
                 )
 
                 pricing = (
-                    f"${cost:.2f} (${info['input_cost']:.2f}, ${info['output_cost']:.2f}"
+                    f"${cost:.2f} (${info['input_cost']:.2f}, ${info['output_cost']:.2f})"
                     if info["input_cost"] > 0 and info["output_cost"] > 0
                     else "free"
                 )
 
-                console.dim(f"{settings.model} · {settings.mode} · session: {pricing})")
+                console.dim(f"{settings.model} · {settings.mode} · session: {pricing}")
                 console.renderable(grid)
         except KeyboardInterrupt:
             continue
