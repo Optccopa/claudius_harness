@@ -1,4 +1,4 @@
-# Neptune <img src="neptune_cutout.png" width="29" height="29" style="transform: translateY(8px);">
+# Neptune <img src="neptune_cutout.png" width="29" height="29">
 
 
 A model harness like Claude Code or Codex built in python, supports Anthropic natively and a large amount of models via OpenRouter and Ollama
