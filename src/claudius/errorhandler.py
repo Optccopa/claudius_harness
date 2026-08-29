@@ -30,6 +30,15 @@ class ErrorHandler:
             return f"{path}:{line_number}"
 
     def describe(self, exc: Exception) -> str:
+        if hasattr(exc, "body"):
+            if exc.body.get("metadata"):
+                if exc.body["metadata"].get("raw"):
+                    return exc.body["metadata"]["raw"]
+
+            elif exc.body.get("error"):
+                if exc.body["error"].get("message"):
+                    return exc.body["error"]["message"]
+
         return f"{type(exc).__name__} @ {self._location(exc)}\n"
 
     def exit(self, exc: Exception):

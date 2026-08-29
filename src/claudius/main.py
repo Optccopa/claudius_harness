@@ -245,8 +245,6 @@ def chat(first: str | None = None):
                 print()
 
             except anthropic.PermissionDeniedError as e:
-                if e.status_code == 403:
-                    console.error("You may have an invalid model")
                 handler.log(e)
                 messages.save_exc(type(e).__name__, snapshot)
 
