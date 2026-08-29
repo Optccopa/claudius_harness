@@ -6,10 +6,23 @@ build-backend = "setuptools.build_meta"
 name = "neptune-code"
 version = "0.1.0"
 description = "A model harness like claudecode or codex built in python, supports Anthropic natively and a large amount of models via OpenRouter and Ollama"
+readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "Optccopa" }]
+keywords = ["llm", "cli", "agent", "harness", "anthropic", "openrouter", "ollama"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Utilities",
+]
 dependencies = [
     "anthropic",
     "rich",
@@ -30,7 +43,9 @@ dev = [
 neptune = "neptune.cli:main"
 
 [project.urls]
+Homepage = "https://github.com/Optccopa/neptune"
 Repository = "https://github.com/Optccopa/neptune"
+Issues = "https://github.com/Optccopa/neptune/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
