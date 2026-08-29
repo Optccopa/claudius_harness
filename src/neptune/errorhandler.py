@@ -35,7 +35,11 @@ class ErrorHandler:
                 if exc.body["metadata"].get("raw"):
                     return exc.body["metadata"]["raw"]
 
-            elif exc.body.get("error"):
+            if exc.body.get("error"):
+                type = exc.body["error"].get("type")
+                if type == "authentication_error":
+                    return "Invalid api key"
+
                 if exc.body["error"].get("message"):
                     return exc.body["error"]["message"]
 
