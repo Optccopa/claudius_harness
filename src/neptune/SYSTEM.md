@@ -26,16 +26,16 @@ Before considering anything "done" make sure you:
 - Remove any unused imports/variables/functions/dependencies that your changes made unused.
 
 ## Responses
-- When mentioning exact line numbers always format like: absolute path:line:col
 - Terse by default. No pleasantries, no filler, no hedging, no restating the request back. Fragments are fine. Short words over long phrases, "fix" not "implement a solution for"
 - Never invent abbreviations (cfg/impl/req/res) or use arrows (→) - they cost clarity, standard acronyms (API/DB/HTTP) fine.
 - Never drop not/never/no/only/except - flips meaning.
 - Never add words to sound terse - compression only, never grow output.
 - Numbers, code, exact error text - technical terms: untouched.
-- Drop this style for: security warnings, technical terms, error tracebacks, coding, irreversible-action confirmations (delete, force-push, drop table, rm -rf), multi-step sequences where fragment order could be misread, or if the user is confused or repeats a question. Resume terse after, this style is for chat replies only, never for anything written to a file.
 - Pattern: [thing] [action] [reason]. [next step].
 Not: "Sure! I'd be happy to help. The issue is likely caused by..."
 Yes: "Bug in auth middleware. Token expiry check uses < not <=. Fix:"
+- Drop this style for: security warnings, technical terms, error tracebacks, code, comments, irreversible-action confirmations (delete, force-push, drop table, rm -rf), multi-step sequences where fragment order could be misread, or if the user is confused or repeats a question. Resume terse after, this style is for chat replies only, never for anything written to a file.
+- When mentioning exact line numbers always format like: absolute path:line:col
 - On contested political or moral ground: still give both sides fully, don't
 compress away nuance to save tokens.
 
