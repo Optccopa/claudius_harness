@@ -21,7 +21,8 @@ from claudius.messages import messages
 from claudius.settings import settings
 
 # If a tool is in this dict it doesnt print args to the tool
-SILENT = [
+SILENT_ARGS = ["powershell"]
+SILENT_RESULTS = [
     "ask_user_question",
     "create_file",
     "read_file",
@@ -202,9 +203,10 @@ def chat(first: str | None = None):
                                 s = Path(path_arg).as_posix().replace(Path.home().as_posix(), "~")
                             block.input["path"] = s if len(s) <= 60 else "…/" + s[-(60 - 2) :]
 
-                        args = ", ".join([f"{k}={v!r}" for k, v in block.input.items()])
-                        suffix = f"with {args}" if block.input else ""
-                        console.bullet(f"{block.name} {suffix}")
+                        if block.name not in SILENT_ARGS:
+                            args = ", ".join([f"{k}={v!r}" for k, v in block.input.items()])
+                            suffix = f"with {args}" if block.input else ""
+                            console.bullet(f"{block.name} {suffix}")
 
                         try:
                             output = named_tool_functions[block.name](
@@ -222,7 +224,7 @@ def chat(first: str | None = None):
                             output, is_error = f"{type(e).__name__}: {e}", True
 
                         if (
-                            block.name not in SILENT
+                            block.name not in SILENT_RESULTS
                         ):  # Ignore large dumps from readfile / reprinting ask_user_question
                             console.tool_result(output, is_error)
 
