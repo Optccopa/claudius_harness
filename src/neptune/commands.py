@@ -2,10 +2,10 @@ from pathlib import Path
 
 import questionary as qt
 
-from claudius.clients import models
-from claudius.console import console
-from claudius.messages import messages
-from claudius.settings import settings
+from neptune.clients import models
+from neptune.console import console
+from neptune.messages import messages
+from neptune.settings import settings
 
 
 class CommandHandler:
@@ -110,7 +110,7 @@ class CommandHandler:
         console.success("Loaded messages")
 
     def _dir(self):
-        console.info(f"claudius directory: {settings.claudius_dir.resolve()}")
+        console.info(f"neptune directory: {settings.neptune_dir.resolve()}")
 
     def parse(self, user_input: str = "/") -> None:
         cmd, _, args = user_input.removeprefix("/").partition(" ")

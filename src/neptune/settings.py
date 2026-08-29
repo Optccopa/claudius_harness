@@ -8,16 +8,16 @@ from platformdirs import user_data_dir
 
 class Settings:
     def __init__(self):
-        self.claudius_dir = Path(user_data_dir(".claudius", appauthor=False))
+        self.neptune_dir = Path(user_data_dir(".neptune", appauthor=False))
 
         self.cwd = Path().resolve()
 
-        self.claudius_dir.mkdir(exist_ok=True, parents=True)
+        self.neptune_dir.mkdir(exist_ok=True, parents=True)
 
-        self.settings_file = self.claudius_dir / "settings.json"
+        self.settings_file = self.neptune_dir / "settings.json"
         self._print_for_settings_file()
 
-        self.env_file = self.claudius_dir / ".env"
+        self.env_file = self.neptune_dir / ".env"
         self._print_for_env_file()
 
         load_dotenv(self.env_file)
@@ -25,7 +25,7 @@ class Settings:
         self.claude_file = self.cwd / "CLAUDE.md"
 
         # most recently sent filled sys prompt
-        self.debug_dir = self.claudius_dir / "debug"
+        self.debug_dir = self.neptune_dir / "debug"
         self.debug_dir.mkdir(parents=True, exist_ok=True)
         self.debug_system_file = self.debug_dir / "sysprompt.md"
 
@@ -37,7 +37,7 @@ class Settings:
 
         self.system_file = Path(__file__).resolve().parent / "SYSTEM.md"
 
-        self.chats_dir = self.claudius_dir / "chats"
+        self.chats_dir = self.neptune_dir / "chats"
         self.chats_dir.mkdir(exist_ok=True, parents=True)
 
         self.ollama_base_url = "http://localhost:11434"

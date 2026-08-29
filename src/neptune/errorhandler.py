@@ -1,8 +1,8 @@
 import traceback
 from pathlib import Path
 
-from claudius.console import console
-from claudius.settings import settings
+from neptune.console import console
+from neptune.settings import settings
 
 
 class ErrorHandler:
@@ -42,11 +42,11 @@ class ErrorHandler:
         return f"{type(exc).__name__} @ {self._location(exc)}\n"
 
     def exit(self, exc: Exception):
-        console.error(f"Claudius has crashed :(\n{self.describe(exc)}")
+        console.error(f"Neptune has crashed :(\n{self.describe(exc)}")
         raise SystemExit()
 
     def log(self, exc: Exception):
-        console.error(f"Claudius had an error :(\n{self.describe(exc)}")
+        console.error(f"Neptune had an error :(\n{self.describe(exc)}")
 
 
 handler = ErrorHandler()

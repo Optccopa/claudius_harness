@@ -3,11 +3,11 @@ from typing import Any
 import anthropic
 from httpx2 import ConnectError
 
-from claudius.console import console
-from claudius.errorhandler import handler
-from claudius.http_client import http_client
-from claudius.settings import settings
-from claudius.tools import tools
+from neptune.console import console
+from neptune.errorhandler import handler
+from neptune.http_client import http_client
+from neptune.settings import settings
+from neptune.tools import tools
 
 DEFAULT_INFO: dict[str, Any] = {"context_length": 256000, "input_cost": 0.0, "output_cost": 0.0}
 
@@ -177,8 +177,8 @@ class OpenRouter(anthropic.Anthropic):
             max_retries=0,
             http_client=http_client(),
             default_headers={
-                "HTTP-Referer": "https://github.com/optccopa/claudius_harness",
-                "X-OpenRouter-Title": "Claudius",
+                "HTTP-Referer": "https://github.com/optccopa/neptune",
+                "X-OpenRouter-Title": "Neptune",
                 "X-OpenRouter-Categories": "coding-agent,productivity",
             },
         )

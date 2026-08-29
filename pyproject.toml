@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "claudius"
+name = "neptune-code"
 version = "0.1.0"
 description = "A model harness like claudecode or codex built in python, supports Anthropic natively and a large amount of models via OpenRouter and Ollama"
 license = "Apache-2.0"
@@ -27,16 +27,16 @@ dev = [
 ]
 
 [project.scripts]
-claudius = "claudius.cli:main"
+neptune = "neptune.cli:main"
 
 [project.urls]
-Repository = "https://github.com/Optccopa/claudius_harness"
+Repository = "https://github.com/Optccopa/neptune"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-claudius = ["SYSTEM.md"]
+neptune = ["SYSTEM.md"]
 
 [tool.ruff]
 line-length = 100
@@ -48,5 +48,5 @@ select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
 
 [tool.mypy]
 python_version = "3.10"
-files = ["src/claudius"]
+files = ["src/neptune"]
 check_untyped_defs = true

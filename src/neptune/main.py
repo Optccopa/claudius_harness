@@ -1,5 +1,5 @@
 """
-Main CLI assistant, run with `claudius "hello"`
+Main CLI assistant, run with `neptune "hello"`
 """
 
 import inspect
@@ -12,13 +12,13 @@ from rich.progress_bar import ProgressBar
 from rich.table import Table
 from rich.text import Text
 
-from claudius import tools
-from claudius.clients import client, models
-from claudius.commands import handler as command_handler
-from claudius.console import console
-from claudius.errorhandler import handler
-from claudius.messages import messages
-from claudius.settings import settings
+from neptune import tools
+from neptune.clients import client, models
+from neptune.commands import handler as command_handler
+from neptune.console import console
+from neptune.errorhandler import handler
+from neptune.messages import messages
+from neptune.settings import settings
 
 # If a tool is in this dict it doesnt print args to the tool
 SILENT_ARGS = ["powershell"]

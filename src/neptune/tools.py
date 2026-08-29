@@ -8,8 +8,8 @@ from typing import Any
 import questionary as qt
 from rich.markup import escape
 
-from claudius.console import PROMPT_STYLE, console
-from claudius.settings import settings
+from neptune.console import PROMPT_STYLE, console
+from neptune.settings import settings
 
 TREE_IGNORE = [
     "node_modules",

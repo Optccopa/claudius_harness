@@ -3,8 +3,8 @@ import json
 import platform
 from pathlib import Path
 
-from claudius.console import console
-from claudius.settings import settings
+from neptune.console import console
+from neptune.settings import settings
 
 warned = False
 

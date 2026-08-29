@@ -1,12 +1,12 @@
 import argparse
 
-from claudius.console import console
-from claudius.main import chat
+from neptune.console import console
+from neptune.main import chat
 
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="claudius", description="Runs the claudius cli (claudecode like)"
+        prog="neptune", description="Runs the neptune cli (claudecode like)"
     )
     parser.add_argument("user_input", nargs="?")
     args = parser.parse_args()
