@@ -13,11 +13,7 @@ A model harness like Claude Code or Codex built in python, supports Anthropic na
 ## Install
 
 ```bash
-git clone https://github.com/Optccopa/neptune
-
-cd neptune
-
-pip install -e .
+pip install neptune-code
 
 neptune "hello" # Prompts to fill in api secrets on first run
 ```
