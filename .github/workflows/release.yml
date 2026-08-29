@@ -16,6 +16,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: verify tag matches pyproject version
+        run: |
+          version=$(grep -m1 -E '^version *= *"' pyproject.toml | sed -E 's/.*"(.*)".*/\1/')
+          if [ -z "$version" ]; then
+            echo "::error::could not read version from pyproject.toml"
+            exit 1
+          fi
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match pyproject version $version"
+            exit 1
+          fi
+          echo "publishing $version as $GITHUB_REF_NAME"
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
