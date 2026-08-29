@@ -352,7 +352,7 @@ class RejectedToolUse(Exception):
 
 def _raise_for_permission(label: str, mode: str):
     if mode == "auto":
-        print(f"Claude ran `{label}` (auto)")
+        print(f"{settings.model} ran `{label}` (auto)")
         return
 
     else:
