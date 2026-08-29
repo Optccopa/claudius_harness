@@ -176,6 +176,11 @@ class OpenRouter(anthropic.Anthropic):
             base_url=settings.openrouter_base_url,
             max_retries=0,
             http_client=http_client(),
+            default_headers={
+                "HTTP-Referer": "https://github.com/optccopa/claudius_harness",
+                "X-OpenRouter-Title": "Claudius",
+                "X-OpenRouter-Categories": "coding-agent,productivity",
+            },
         )
 
     def tools(self) -> list:
