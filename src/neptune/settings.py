@@ -18,7 +18,7 @@ class Settings:
         self._print_for_settings_file()
 
         self.env_file = self.neptune_dir / ".env"
-        self._print_for_env_file()
+        self._exit_for_env_file()
 
         load_dotenv(self.env_file)
 
@@ -43,15 +43,18 @@ class Settings:
         self.ollama_base_url = "http://localhost:11434"
         self.openrouter_base_url = "https://openrouter.ai/api"
 
-    def _print_for_env_file(self):
+    def _exit_for_env_file(self):
         if not self.env_file.exists():
             self.env_file.write_text(
                 "ANTHROPIC_API_KEY=\nOPENROUTER_API_KEY=\n",
                 encoding="utf-8",
             )
+            # escape codes make the text red
+            # console isnt usable because this is initialized first
             print(
-                f"{self.env_file.resolve()} must have either OPENROUTER_API_KEY or ANTHROPIC_API_KEY defined"
+                f"\033[31m{self.env_file.resolve()} must have either OPENROUTER_API_KEY or ANTHROPIC_API_KEY defined\033[0m"
             )
+            raise SystemExit()
 
     def _print_for_settings_file(self):
         if not self.settings_file.exists():
