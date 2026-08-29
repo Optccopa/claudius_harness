@@ -1,4 +1,4 @@
-# Neptune <img src="images/neptune_cutout.png" width="29" height="29">
+# Neptune <img src="https://raw.githubusercontent.com/Optccopa/neptune/main/images/neptune_cutout.png" width="29" height="29">
 
 A model harness like Claude Code or Codex built in python, supports Anthropic natively and a large amount of models via OpenRouter and Ollama
 
@@ -19,6 +19,6 @@ neptune "hello" # Prompts to fill in api secrets on first run
 ```
 
 ## Example
-![poolside tool use](images/prompt.png)
+![poolside tool use](https://raw.githubusercontent.com/Optccopa/neptune/main/images/prompt.png)
 ## License
 Apache License 2.0, see [LICENSE](LICENSE).
