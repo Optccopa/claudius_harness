@@ -1,6 +1,7 @@
 import argparse
 
 from neptune.console import console
+from neptune.errorhandler import handler
 from neptune.main import chat
 
 
@@ -12,8 +13,10 @@ def main():
     args = parser.parse_args()
 
     console.clear()
-
-    chat(args.user_input)
+    try:
+        chat(args.user_input)
+    except Exception as e:
+        handler.exit(e)
 
 
 if __name__ == "__main__":
