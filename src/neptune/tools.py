@@ -546,16 +546,12 @@ def ls(path: str | Path = Path(), recurse: bool = False, max_entries: int = 200,
 
 
 def _iter_files(root: Path, pattern: str):
-    if pattern.startswith("**/") and "/" not in pattern[3:]:
-        name = pattern[3:]
-        for dirpath, dirnames, filenames in os.walk(root):
-            dirnames[:] = [d for d in dirnames if d not in WALK_IGNORE]
-            for fn in filenames:
-                if fnmatch(fn, name):
-                    yield Path(dirpath) / fn
-    else:
-        for p in root.glob(pattern):
-            if p.is_file():
+    fast = pattern[3:] if pattern.startswith("**/") and "/" not in pattern[3:] else None
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in WALK_IGNORE and not d.startswith(".")]
+        for fn in filenames:
+            p = Path(dirpath) / fn
+            if fnmatch(fn if fast else p.relative_to(root).as_posix(), fast or pattern):
                 yield p
 
 
