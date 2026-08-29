@@ -1,10 +1,11 @@
 from typing import Any
 
 import anthropic
-import httpx
+from httpx2 import ConnectError
 
 from claudius.console import console
 from claudius.errorhandler import handler
+from claudius.http_client import http_client
 from claudius.settings import settings
 from claudius.tools import tools
 
@@ -22,7 +23,7 @@ class Models:
         """returns: paid, free"""
         paid: list[str] = []
         free: list[str] = []
-        r = httpx.get(
+        r = http_client().get(
             f"{settings.openrouter_base_url}/v1/models",
             params={
                 "sort": "intelligence-high-to-low",
@@ -56,7 +57,7 @@ class Models:
         return paid, free
 
     def _list_ollama(self) -> list:
-        r = httpx.get(f"{settings.ollama_base_url}/api/tags")
+        r = http_client().get(f"{settings.ollama_base_url}/api/tags")
         if r.status_code == 200:
             return [m["name"] for m in r.json()["models"] if "tools" in m["capabilities"]]
         return []
@@ -73,7 +74,7 @@ class Models:
 
             else:
                 return self._openrouter_models
-        except httpx.ConnectError as e:
+        except ConnectError as e:
             handler.log(e)
             console.error("Failed loading openrouter models due to openrouter not responding")
             return ([], [])
@@ -88,7 +89,7 @@ class Models:
             else:
                 return self._ollama_models
 
-        except httpx.ConnectError:
+        except ConnectError:
             console.error("Failed loading ollama models due to ollama server not running")
             return []
 
@@ -121,7 +122,9 @@ class Models:
         return self._info.get(settings.model) or {}
 
     def _info_ollama(self) -> dict:
-        r = httpx.post(f"{settings.ollama_base_url}/api/show", json={"model": settings.model})
+        r = http_client().post(
+            f"{settings.ollama_base_url}/api/show", json={"model": settings.model}
+        )
         if r.status_code != 200:
             return {}
 
@@ -144,7 +147,7 @@ class Models:
 
                 if info:
                     self._info[settings.model] = info
-        except (httpx.ConnectError, anthropic.APIError, ValueError):
+        except (ConnectError, anthropic.APIError, ValueError):
             console.error("Failed fetching model info, look above, using defaults")
             return DEFAULT_INFO
 
@@ -156,7 +159,7 @@ class Anthropic(anthropic.Anthropic):
         if not settings.anthropic_api_key:
             raise ValueError("Failed loading Anthropic api key, set ANTHROPIC_API_KEY in .env")
 
-        super().__init__(api_key=settings.anthropic_api_key)
+        super().__init__(api_key=settings.anthropic_api_key, http_client=http_client())
 
     def tools(self) -> list:
         """Defines the tools used when calling models on the client"""
@@ -172,6 +175,7 @@ class OpenRouter(anthropic.Anthropic):
             api_key=settings.openrouter_api_key,
             base_url=settings.openrouter_base_url,
             max_retries=0,
+            http_client=http_client(),
         )
 
     def tools(self) -> list:
@@ -189,6 +193,7 @@ class Ollama(anthropic.Anthropic):
             api_key="ollama",  # local
             base_url=settings.ollama_base_url,
             max_retries=0,
+            http_client=http_client(),
         )
 
     def tools(self) -> list:

@@ -13,7 +13,7 @@ authors = [{ name = "Optccopa" }]
 dependencies = [
     "anthropic",
     "rich",
-    "httpx",
+    "httpx2[http2]",
     "python-dotenv",
     "questionary",
     "platformdirs"
