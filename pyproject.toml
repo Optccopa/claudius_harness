@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neptune-code"
-version = "0.1.4"
+version = "0.1.6"
 description = "A model harness like claudecode or codex built in python, supports Anthropic natively and a large amount of models via OpenRouter and Ollama"
 readme = "README.md"
 license = "Apache-2.0"
